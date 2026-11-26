@@ -417,3 +417,10 @@
   .bill .actions { display: grid !important; grid-template-columns: 1.25fr 1fr .8fr; gap: 6px !important; margin-top: 6px !important; }
   .bill .actions button { min-height: 42px !important; height: auto !important; padding: 6px 6px !important; font-size: 13px !important; white-space: nowrap; min-width: 0 !important; width: 100% !important; }
 }
+
+/* ── 10. 낮은 가로 화면 정산 내역 2열 (667×320 에서 내역 스크롤 없이 전부 보이게) ── */
+@media (orientation: landscape) and (max-height: 360px) {
+  .bill .bill-body ol { display: grid !important; grid-template-columns: 1fr 1fr; gap: 3px 6px !important; margin: 0 0 3px !important; }
+  .bill .bill-body ol li { margin: 0 !important; }
+  .bill .bill-body p { margin: 2px 0 !important; }
+}
