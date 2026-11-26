@@ -30143,6 +30143,15 @@ async function main() {
   const wss = new import_websocket_server.default({ server, path: "/ws" });
   if (process.env.NODE_ENV === "production") {
     const dist = import_node_path.default.join(ROOT, "dist");
+    const year = {
+      immutable: true,
+      maxAge: 31536e6,
+      setHeaders(res) {
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      }
+    };
+    app.use("/cards", import_express.default.static(import_node_path.default.join(dist, "cards"), year));
+    app.use("/assets", import_express.default.static(import_node_path.default.join(dist, "assets"), year));
     app.use(import_express.default.static(dist));
     app.use((req, res, next) => {
       if (req.method !== "GET" || req.path.startsWith("/api") || req.path.startsWith("/ws")) return next();

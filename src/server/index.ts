@@ -809,6 +809,15 @@ async function main() {
 
   if (process.env.NODE_ENV === 'production') {
     const dist = path.join(ROOT, 'dist')
+    const year = {
+      immutable: true,
+      maxAge: 31_536_000_000,
+      setHeaders(res: express.Response) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+      },
+    }
+    app.use('/cards', express.static(path.join(dist, 'cards'), year))
+    app.use('/assets', express.static(path.join(dist, 'assets'), year))
     app.use(express.static(dist))
     app.use((req, res, next) => {
       if (req.method !== 'GET' || req.path.startsWith('/api') || req.path.startsWith('/ws')) return next()

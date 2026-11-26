@@ -3,9 +3,8 @@ services:
     name: dalbit-matgo
     runtime: node
     plan: free
-    region: singapore
-    buildCommand: echo prebuilt
-    startCommand: node server/index.cjs
+    buildCommand: npm install && npm run build
+    startCommand: npm start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
