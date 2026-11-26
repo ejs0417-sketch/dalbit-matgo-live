@@ -821,8 +821,7 @@ body.calm *, body.calm *::before, body.calm *::after {
     grid-template-rows: repeat(2, calc(var(--cw, 44px) * 1.63));
     grid-auto-rows: calc(var(--cw, 44px) * 1.63);
     gap: 4px;
-    height: 100%;
-    align-content: center;
+    align-content: start;
     overflow: hidden;
   }
   .stage .player.bottom {

@@ -120,7 +120,7 @@
     gap: 4px !important;
     padding: 6px 6px !important;
   }
-  .stage .board { display: flex !important; flex-direction: column !important; height: 100% !important; min-height: 0 !important; gap: 4px !important; overflow: hidden !important; }
+  .stage .board { display: flex !important; flex-direction: column !important; min-height: 0 !important; gap: 4px !important; overflow: hidden !important; }
   .stage .player.top, .stage .side {
     flex: none !important;
     display: grid !important;
@@ -166,8 +166,10 @@
     display: grid !important;
     grid-template-columns: repeat(6, var(--cw)) !important;
     grid-template-rows: repeat(2, calc(var(--cw) * 1.63)) !important;
-    height: 100% !important;
-    min-height: 0 !important;
+    align-content: start !important;
+    height: calc(var(--cw) * 1.63 * 2 + max(4px, calc(var(--cw) * .12)) + 4px) !important;
+    min-height: calc(var(--cw) * 1.63 * 2 + max(4px, calc(var(--cw) * .12)) + 4px) !important;
+    max-height: calc(var(--cw) * 1.63 * 2 + max(4px, calc(var(--cw) * .12)) + 4px) !important;
     gap: max(4px, calc(var(--cw) * .12)) max(4px, calc(var(--cw) * .14)) !important;
     padding: 2px !important;
   }

@@ -97,12 +97,17 @@
   grid-auto-rows: calc(var(--cw) * 1.63) !important;
   grid-auto-flow: row !important;
   justify-content: center !important;
-  align-content: center !important;
-  align-items: stretch !important;
+  align-content: start !important;
+  align-items: start !important;
   justify-items: stretch !important;
   gap: max(4px, calc(var(--cw) * .12)) max(4px, calc(var(--cw) * .14)) !important;
   padding: 2px !important;
   flex-wrap: nowrap !important;
+  box-sizing: border-box !important;
+  height: calc(var(--cw) * 1.63 * 2 + max(4px, calc(var(--cw) * .12)) + 4px) !important;
+  min-height: calc(var(--cw) * 1.63 * 2 + max(4px, calc(var(--cw) * .12)) + 4px) !important;
+  max-height: calc(var(--cw) * 1.63 * 2 + max(4px, calc(var(--cw) * .12)) + 4px) !important;
+  align-self: center !important;
 }
 .stage.v05-mat .floor .floor-slot,
 .stage.v05-mat .floor .pile {
