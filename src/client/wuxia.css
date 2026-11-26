@@ -495,3 +495,133 @@ img.portrait.wx-portrait { aspect-ratio: 1 / 1; height: auto; object-fit: cover;
   .stage .who .portrait { width: 24px; }
   .wx-score, .stage .who strong.wx-score { font-size: 23px; }
 }
+
+/* ───────── v0.4.3 모바일 가로 정산/선택 팝업 잘림 방지 ───────── */
+.bill .coins { position: absolute; inset: 0; overflow: hidden; z-index: 0; }
+.bill-hero, .bill-side, .bill-body, .bill .actions { position: relative; z-index: 1; min-width: 0; }
+.bill-stamps {
+  display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
+  margin: 8px 0 4px;
+}
+.bill-stamps span {
+  opacity: .28;
+  padding: 4px 9px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.04);
+  font-size: 12px;
+  font-weight: 800;
+}
+.bill-stamps span.on { opacity: 1; }
+.bill-stamps span.stamp { animation: pop .25s ease both; }
+.bill-stamps span.bak-pi { box-shadow: 0 0 0 2px #ff5a5a; }
+.bill-stamps span.bak-gwang { box-shadow: 0 0 0 2px #ffe08a; }
+.bill-stamps span.bak-gobak, .bill-stamps span.bak-go { box-shadow: 0 0 0 2px #b48cff; }
+.bill-stamps span.bak-meong { box-shadow: 0 0 0 2px #8a8aa0; }
+.bill-sub { margin: 2px 0 6px; }
+.bill-payout {
+  margin: 8px 0 0;
+  font-size: 28px;
+  line-height: 1.1;
+  font-weight: 800;
+  color: #ffe08a;
+  text-shadow: 0 0 18px rgba(243, 201, 105, .45);
+}
+.bill-payout span {
+  margin-left: 8px;
+  font-size: 15px;
+  color: #f0e2c8;
+  font-weight: 700;
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .modal {
+    padding: 8px;
+    place-items: center;
+    align-items: center;
+  }
+  .modal .sheet,
+  .modal .bill {
+    width: min(780px, calc(100dvw - 16px));
+    max-height: calc(100dvh - 16px);
+    box-sizing: border-box;
+  }
+  .modal .sheet {
+    overflow: auto;
+    padding: 10px 14px;
+  }
+  .modal .sheet h2 {
+    font-size: 28px;
+    margin: 4px 0;
+    line-height: 1.15;
+  }
+  .modal .sheet p { margin: 4px 0; font-size: 13px; }
+  .modal .sheet .actions { margin-top: 8px; }
+
+  .bill {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    column-gap: 14px;
+    align-items: stretch;
+    height: min(max-content, calc(100dvh - 16px));
+    max-height: calc(100dvh - 16px);
+    overflow: hidden;
+    padding: 10px 14px !important;
+    text-align: left;
+  }
+  .bill-hero {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .bill .eyebrow { margin: 0; font-size: 11px; letter-spacing: .12em; }
+  .bill h2 { font-size: 24px !important; margin: 0 0 2px !important; line-height: 1.15; }
+  .bill-sub { margin: 0 0 6px; font-size: 12px; line-height: 1.25; }
+  .bill-stamps { justify-content: flex-start; margin: 4px 0; gap: 4px; }
+  .bill-stamps span { padding: 3px 8px; font-size: 11px; }
+  .bill-payout { margin: 6px 0 0; font-size: 26px; }
+  .bill-payout span { font-size: 13px; }
+
+  .bill-side {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .bill-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .bill ol { margin: 0 0 6px !important; gap: 3px !important; }
+  .bill li { padding: 4px 9px !important; border-radius: 8px !important; font-size: 12px; }
+  .bill .details,
+  .bill-body > p { margin: 2px 0; font-size: 12px; line-height: 1.25; }
+  .bill .bets.slim { margin: 4px 0; gap: 4px; }
+  .bill .bets.slim button {
+    padding: 4px 8px;
+    font-size: 11px;
+    min-height: 28px;
+    height: 28px;
+  }
+  .bill .actions {
+    flex: none;
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+    justify-content: stretch;
+  }
+  .bill .actions button {
+    flex: 1 1 calc(50% - 6px);
+    padding: 7px 10px !important;
+    min-height: 34px !important;
+    height: auto !important;
+    font-size: 13px !important;
+    grid-column: auto !important;
+    white-space: nowrap;
+  }
+  .bill .actions button:first-child { flex: 1 1 100%; }
+}

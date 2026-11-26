@@ -153,37 +153,56 @@ function Bill({
           ))}
         </div>
       )}
-      <p className="eyebrow">{showdown.nagari ? '무승부' : win ? '승리' : '패배'}</p>
-      <h2>{showdown.title}</h2>
-      <p>{showdown.subtitle}</p>
-      {!showdown.nagari && (
-        <ol>
-          <li className={step >= 0 ? 'on' : ''}>기본 점수 <b>{showdown.base}점</b></li>
-          {showdown.goBonus > 0 && <li className={goOn ? 'on' : ''}>고 보너스 <b>+{showdown.goBonus}</b></li>}
-          {showdown.factors.map((factor, index) => (
-            <li key={factor.id} className={`${step >= index + 2 ? 'on stamp' : ''} bak-${factor.id}`}>{factor.label} <b>×{factor.mul}</b></li>
-          ))}
-          <li className={moneyOn ? 'on' : ''}>점수 <b>{points}점</b></li>
-          <li className={moneyOn ? 'on' : ''}>받은 돈 <b>{won(counted)}원</b></li>
-        </ol>
-      )}
-      {showdown.details.length > 0 && (
-        <p className="details">{showdown.details.map((d) => `${d.label} ${d.points}`).join(' · ')}</p>
-      )}
-      {showdown.money > showdown.paid && !showdown.nagari && <p>상대가 가진 금액만큼 정산했습니다.</p>}
-      {host && (
-        <div className="bets slim">
-          {BETS.map((b) => (
-            <button key={b.value} type="button" className={bet === b.value ? 'on' : ''} onClick={() => onBet(b.value)}>점당 {b.label}</button>
-          ))}
+      <div className="bill-hero">
+        <p className="eyebrow">{showdown.nagari ? '무승부' : win ? '승리' : '패배'}</p>
+        <h2>{showdown.title}</h2>
+        <p className="bill-sub">{showdown.subtitle}</p>
+        {!showdown.nagari && showdown.factors.length > 0 && (
+          <div className="bill-stamps" aria-label="배수 도장">
+            {showdown.factors.map((factor, index) => (
+              <span key={factor.id} className={`${step >= index + 2 ? 'on stamp' : ''} bak-${factor.id}`}>{factor.label} <b>×{factor.mul}</b></span>
+            ))}
+          </div>
+        )}
+        {!showdown.nagari && (
+          <p className={`bill-payout${moneyOn ? ' on' : ''}`}>
+            <b>{won(counted)}원</b>
+            <span>{points}점</span>
+          </p>
+        )}
+      </div>
+      <div className="bill-side">
+        <div className="bill-body">
+          {!showdown.nagari && (
+            <ol>
+              <li className={step >= 0 ? 'on' : ''}>기본 점수 <b>{showdown.base}점</b></li>
+              {showdown.goBonus > 0 && <li className={goOn ? 'on' : ''}>고 보너스 <b>+{showdown.goBonus}</b></li>}
+              {showdown.factors.map((factor, index) => (
+                <li key={factor.id} className={`${step >= index + 2 ? 'on stamp' : ''} bak-${factor.id}`}>{factor.label} <b>×{factor.mul}</b></li>
+              ))}
+              <li className={moneyOn ? 'on' : ''}>점수 <b>{points}점</b></li>
+              <li className={moneyOn ? 'on' : ''}>받은 돈 <b>{won(counted)}원</b></li>
+            </ol>
+          )}
+          {showdown.details.length > 0 && (
+            <p className="details">{showdown.details.map((d) => `${d.label} ${d.points}`).join(' · ')}</p>
+          )}
+          {showdown.money > showdown.paid && !showdown.nagari && <p>상대가 가진 금액만큼 정산했습니다.</p>}
+          {host && (
+            <div className="bets slim">
+              {BETS.map((b) => (
+                <button key={b.value} type="button" className={bet === b.value ? 'on' : ''} onClick={() => onBet(b.value)}>점당 {b.label}</button>
+              ))}
+            </div>
+          )}
+          <p>보유 {won(purse)}원</p>
+          {broke && <p>보유금이 점당 금액보다 적습니다. 무료 충전으로 이어서 두세요.</p>}
         </div>
-      )}
-      <p>보유 {won(purse)}원</p>
-      {broke && <p>보유금이 점당 금액보다 적습니다. 무료 충전으로 이어서 두세요.</p>}
-      <div className="actions">
-        <Button size="lg" variant="ink" onClick={onRecharge}>무료 충전 +100만</Button>
-        <Button size="lg" onClick={onRematch}>{oppReady ? '상대가 기다리는 중 · 한 판 더' : '한 판 더'}</Button>
-        <Button size="lg" variant="ghost" onClick={onLeave}>나가기</Button>
+        <div className="actions">
+          <Button size="lg" variant="ink" onClick={onRecharge}>무료 충전 +100만</Button>
+          <Button size="lg" onClick={onRematch}>{oppReady ? '상대가 기다리는 중 · 한 판 더' : '한 판 더'}</Button>
+          <Button size="lg" variant="ghost" onClick={onLeave}>나가기</Button>
+        </div>
       </div>
     </div>
   )
