@@ -341,7 +341,8 @@ export function Table({
         if (wx.suppressed) continue
         const wxMs = fx.current ? playWuxiaForEvent(fx.current, gev, batch) : 0
         // 무협 붓글씨 컷인이 뜨는 이벤트는 기존 Impact 배너를 띄우지 않는다 (이중 컷인 방지)
-        const banner = wx.cutin ? null : bannerFor(ev)
+        // v0.5: 피 뺏기는 실제 카드 비행으로 보여주므로 텍스트 배너 생략
+        const banner = wx.cutin || (phys.current && (ev.type === 'steal' || ev.type === 'debtPay')) ? null : bannerFor(ev)
         const sound = soundFor(ev)
         const skipKung = ev.type === 'drop' && ev.cardId === playedId
         const physical = physics && (ev.type === 'play' || ev.type === 'flip' || ev.type === 'capture' || ev.type === 'steal' || ev.type === 'debtPay' || ev.type === 'bomb' || ev.type === 'bonusPlay' || ev.type === 'drop')
@@ -415,6 +416,10 @@ export function Table({
     })()
     return () => {
       cancel = true
+      // 연출 도중 새 패킷이 오면 남은 배너·핀·숨김을 즉시 정리 (화면에 배너가 남는 문제 방지)
+      setImpact(null)
+      setShake(false)
+      phys.current?.clearPins()
     }
   }, [packet.id, view.you])
 
@@ -435,7 +440,11 @@ export function Table({
   const [forced, setForced] = useState(false)
   useEffect(() => {
     setForced(false)
-    const timer = window.setTimeout(() => setForced(true), 2200)
+    // 대형 컷인·카드 비행이 길어져도 입력이 막히지 않게 3.4초 뒤 강제 활성 + 서버에 준비 신호
+    const timer = window.setTimeout(() => {
+      setForced(true)
+      if (view.decider === view.you && view.phase !== 'ended') onArmed()
+    }, 3400)
     return () => window.clearTimeout(timer)
   }, [packet.id])
   const yourTurn = (ready || forced) && view.decider === view.you && !packet.showdown
