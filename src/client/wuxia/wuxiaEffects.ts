@@ -189,12 +189,13 @@ export class WuxiaEffectsEngine {
     const spec: WuxiaEffectSpec = { ...base, ...overrides };
     const reduced = document.body.classList.contains('calm') || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-    if (!reduced && spec.shake) {
+    // v0.5.3: 컷인 오버레이만 흔들고 바닥패/바디는 고정. 제목 없는 일반 타패(kung/jjak)는 흔들림 없음.
+    if (!reduced && spec.shake && spec.title) {
       const cls = `wx-shake-${spec.shake}`;
-      this.host.classList.remove('wx-shake-sm', 'wx-shake-md', 'wx-shake-lg');
-      void this.host.offsetWidth;
-      this.host.classList.add(cls);
-      window.setTimeout(() => this.host.classList.remove(cls), 560);
+      this.layer.classList.remove('wx-shake-sm', 'wx-shake-md', 'wx-shake-lg');
+      void this.layer.offsetWidth;
+      this.layer.classList.add(cls);
+      window.setTimeout(() => this.layer.classList.remove(cls), 560);
     }
 
     // 소형 타패 이벤트(kung/jjak)는 보드 쪽 물리 연출이 담당 — 오버레이 없음

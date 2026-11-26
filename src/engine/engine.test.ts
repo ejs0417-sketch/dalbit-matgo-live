@@ -15,7 +15,7 @@ import {
   sandbox,
   type ApplyResult,
 } from './game'
-import { limitForPhase, mayAct, PLAY_LIMIT_MS, CHOICE_LIMIT_MS, registerTimeout } from './clock'
+import { limitForPhase, mayAct, PLAY_LIMIT_MS, CHOICE_LIMIT_MS, registerTimeout, allowHumanTurnTimeout } from './clock'
 import { timeoutAction } from './ai'
 import { breakdown, goIntensity, goMultiplier, listYakus, recharge, rechargeGuard, RECHARGE_AMOUNT, RECHARGE_COOLDOWN_MS, MONEY_CAP, settle, type SettlementInput } from './score'
 import { viewFor } from './view'
@@ -657,11 +657,15 @@ describe('족보 연출과 충전, 시간 제한', () => {
     expect(goIntensity(3)).toBe(3)
     expect(goIntensity(4)).toBe(4)
     expect(goIntensity(6)).toBe(5)
+    expect(PLAY_LIMIT_MS).toBe(25_000)
     expect(limitForPhase('turn')).toBe(PLAY_LIMIT_MS)
     expect(limitForPhase('goStop')).toBe(CHOICE_LIMIT_MS)
     expect(limitForPhase('choose')).toBe(CHOICE_LIMIT_MS)
     expect(registerTimeout(0)).toEqual({ streak: 1, auto: false })
     expect(registerTimeout(1)).toEqual({ streak: 2, auto: true })
+    expect(allowHumanTurnTimeout('ai', false)).toBe(false)
+    expect(allowHumanTurnTimeout('pvp', true)).toBe(false)
+    expect(allowHumanTurnTimeout('pvp', false)).toBe(true)
 
     const state = sandbox()
     state.phase = 'goStop'

@@ -29405,7 +29405,7 @@ function timeoutAction(state, seat) {
 }
 
 // src/engine/clock.ts
-var PLAY_LIMIT_MS = 15e3;
+var PLAY_LIMIT_MS = 25e3;
 var CHOICE_LIMIT_MS = 1e4;
 var RECONNECT_LIMIT_MS = 9e4;
 function limitForPhase(phase) {
@@ -29417,6 +29417,9 @@ function registerTimeout(streak) {
 }
 function mayAct(deciderSeat, actor) {
   return deciderSeat === actor;
+}
+function allowHumanTurnTimeout(mode, hasAiOpponent) {
+  return mode !== "ai" && !hasAiOpponent;
 }
 
 // src/engine/seon.ts
@@ -29768,11 +29771,19 @@ function releaseTurn(room, who) {
 }
 function beginClock(room, seat) {
   if (!room.game || room.showdown || decider(room.game) !== seat) return;
+  room.awaitingReady = false;
+  const hasAiOpponent = room.seats.some((s) => s.ai);
+  if (!allowHumanTurnTimeout(room.mode, hasAiOpponent)) {
+    room.clockSeat = seat;
+    room.clockLimit = 0;
+    room.deadlineAt = void 0;
+    pushSync(room);
+    return;
+  }
   const limit = limitForPhase(room.game.phase);
   room.clockSeat = seat;
   room.clockLimit = limit;
   room.deadlineAt = Date.now() + limit;
-  room.awaitingReady = false;
   pushSync(room);
   room.turnTimer = setTimeout(() => actFor(room, seat, true), limit);
 }

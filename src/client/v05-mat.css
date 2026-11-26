@@ -30,11 +30,12 @@
     0 14px 40px rgba(0, 0, 0, .8) !important;
   will-change: transform;
 }
-.stage.v05-mat .felt.thump-a { animation: v05-thump-a .2s cubic-bezier(.3, .7, .3, 1); }
-.stage.v05-mat .felt.thump-b { animation: v05-thump-b .2s cubic-bezier(.3, .7, .3, 1); }
-.stage.v05-mat .felt.thump-big.thump-a, .stage.v05-mat .felt.thump-big.thump-b { animation-duration: .34s; }
-@keyframes v05-thump-a { 0% { transform: translate(0, 0); } 25% { transform: translate(0, 3px) scale(.997); } 55% { transform: translate(-1px, -1px); } 100% { transform: none; } }
-@keyframes v05-thump-b { 0% { transform: translate(0, 0); } 25% { transform: translate(0, 3px) scale(.997); } 55% { transform: translate(1px, -1px); } 100% { transform: none; } }
+.stage.v05-mat .felt.thump-a,
+.stage.v05-mat .felt.thump-b,
+.stage.v05-mat .felt.thump-big.thump-a,
+.stage.v05-mat .felt.thump-big.thump-b { animation: none !important; transform: none !important; }
+@keyframes v05-thump-a { 0%, 100% { transform: none; } }
+@keyframes v05-thump-b { 0%, 100% { transform: none; } }
 
 /* 2. 대시보드 박스 제거: 좌/우/하단 패널은 투명, 담요 위에 직접 */
 .stage.v05-mat .player.top,
@@ -85,20 +86,44 @@
   box-shadow: 0 2px 3px rgba(0, 0, 0, .65), 0 0 0 .5px rgba(0, 0, 0, .5) !important;
 }
 
-/* 3. 바닥패: 담요에 밀착 + 카드 ID 기반 자연 회전 + 같은 월 포개짐 */
-.stage.v05-mat { --cw: 56px; }
-.stage.v05-mat .floor {
-  display: flex !important;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-content: center;
-  align-items: center;
-  gap: 10px 12px !important;
-  grid-template-columns: none !important;
-  padding: 4px !important;
+/* 3. v0.5.3 바닥패: 12칸 고정 슬롯(2행×6열). 장수 변동·매칭 표시로 주변 칸이 1px도 안 밀림 */
+.stage.v05-mat { --cw: 52px; }
+.stage.v05-mat .floor,
+.stage.v05-mat .floor.fixed-slots,
+.stage.v05-mat .floor[data-dense] {
+  display: grid !important;
+  grid-template-columns: repeat(6, var(--cw)) !important;
+  grid-template-rows: repeat(2, calc(var(--cw) * 1.63)) !important;
+  grid-auto-rows: calc(var(--cw) * 1.63) !important;
+  grid-auto-flow: row !important;
+  justify-content: center !important;
+  align-content: center !important;
+  align-items: stretch !important;
+  justify-items: stretch !important;
+  gap: max(4px, calc(var(--cw) * .12)) max(4px, calc(var(--cw) * .14)) !important;
+  padding: 2px !important;
+  flex-wrap: nowrap !important;
 }
-.stage.v05-mat .floor .pile { position: relative; display: flex; align-items: center; flex: none; }
+.stage.v05-mat .floor .floor-slot,
+.stage.v05-mat .floor .pile {
+  position: relative !important;
+  display: block !important;
+  width: var(--cw) !important;
+  height: calc(var(--cw) * 1.63) !important;
+  min-width: var(--cw) !important;
+  min-height: calc(var(--cw) * 1.63) !important;
+  max-width: var(--cw) !important;
+  max-height: calc(var(--cw) * 1.63) !important;
+  flex: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+}
 .stage.v05-mat .floor .hwatu {
+  position: absolute !important;
+  left: 0;
+  top: 0;
   width: var(--cw) !important;
   height: calc(var(--cw) * 1.63) !important;
   max-height: none !important;
@@ -106,27 +131,47 @@
   border-radius: 4px !important;
   transform: rotate(calc(var(--tilt) * .5)) !important;
   box-shadow: 0 3px 6px rgba(0, 0, 0, .55), 0 1px 0 rgba(255, 255, 255, .18) inset, 0 1px 0 #2a120a !important;
-  transition: transform .14s ease, box-shadow .14s ease;
+  transition: box-shadow .14s ease, filter .14s ease;
 }
-.stage.v05-mat .floor .pile .hwatu + .hwatu { margin-left: calc(var(--cw) * -0.58) !important; transform: rotate(calc(var(--tilt) * .5 + 6deg)) translateY(-2px) !important; }
-.stage.v05-mat .floor .hwatu.hot { transform: rotate(0deg) translateY(-3px) scale(1.05) !important; box-shadow: 0 0 0 2px #ffe08a, 0 0 14px rgba(255, 210, 90, .85), 0 8px 12px rgba(0,0,0,.6) !important; }
-.stage.v05-mat .floor .hwatu.pick { animation: v05-pick 1s ease-in-out infinite !important; }
-@keyframes v05-pick { 50% { transform: translateY(-6px) rotate(0deg) scale(1.06); } }
+/* 같은 슬롯 2장: 슬롯 박스 크기는 그대로, 안에서만 살짝 겹침 */
+.stage.v05-mat .floor .floor-slot .hwatu:nth-child(2),
+.stage.v05-mat .floor .pile .hwatu + .hwatu {
+  margin: 0 !important;
+  left: calc(var(--cw) * 0.10);
+  top: 0;
+  transform: rotate(calc(var(--tilt) * .5 + 6deg)) !important;
+  z-index: 2;
+}
+/* 매칭·선택·방금 친 패: 들림/확대/흔들림 없이 금빛 발광만 */
+.stage.v05-mat .floor .hwatu.hot,
+.stage.v05-mat .floor .hwatu.floor-match-hint,
+.stage.v05-mat .floor .hwatu.pick,
+.stage.v05-mat .floor .hwatu.hot.floor-match-hint,
+.stage.v05-mat .floor .hwatu.pick.floor-match-hint {
+  transform: rotate(calc(var(--tilt) * .5)) !important;
+  animation: none !important;
+  filter: none !important;
+  box-shadow: 0 0 0 2px #ffe08a, 0 0 14px rgba(255, 210, 90, .85), 0 3px 6px rgba(0, 0, 0, .55) !important;
+}
+.stage.v05-mat .floor .floor-slot .hwatu:nth-child(2).hot,
+.stage.v05-mat .floor .floor-slot .hwatu:nth-child(2).floor-match-hint,
+.stage.v05-mat .floor .floor-slot .hwatu:nth-child(2).pick {
+  transform: rotate(calc(var(--tilt) * .5 + 6deg)) !important;
+}
+@keyframes v05-pick { 50% { transform: none; } }
 .stage.v05-mat .floor .hwatu .flag {
   top: auto; bottom: -6px; left: auto; right: -8px; transform: rotate(12deg);
   font: 700 10px/1 "Song Myung", serif; padding: 3px 4px; border-radius: 3px;
   background: #b3121f; border: 1px solid #ffd7c2; box-shadow: 0 0 0 1px #5e0710, 0 2px 4px rgba(0,0,0,.6);
 }
 
-/* 뻑: 같은 월 3장이 촘촘히 포개진 부채꼴 입체 스택 (-8 / +2 / +10deg) */
-.stage.v05-mat .floor .pile.ppuk-stack { padding-right: 6px; }
-.stage.v05-mat .floor .pile.ppuk-stack .hwatu:nth-child(1) { transform: rotate(-8deg) translateY(2px) !important; z-index: 1; }
-.stage.v05-mat .floor .pile.ppuk-stack .hwatu:nth-child(2) { margin-left: calc(var(--cw) * -0.72) !important; transform: rotate(2deg) translateY(-1px) !important; z-index: 2; box-shadow: -2px 3px 5px rgba(0,0,0,.6) !important; }
-.stage.v05-mat .floor .pile.ppuk-stack .hwatu:nth-child(3) { margin-left: calc(var(--cw) * -0.72) !important; transform: rotate(10deg) translateY(-3px) !important; z-index: 3; box-shadow: -3px 4px 7px rgba(0,0,0,.7), 0 0 0 1.5px rgba(217, 56, 41, .85) !important; }
-.stage.v05-mat .floor .pile.ppuk-drop .hwatu { animation: v05-ppuk-drop .42s cubic-bezier(.3, 1.4, .4, 1) both; }
-.stage.v05-mat .floor .pile.ppuk-drop .hwatu:nth-child(2) { animation-delay: 65ms; }
-.stage.v05-mat .floor .pile.ppuk-drop .hwatu:nth-child(3) { animation-delay: 130ms; }
-@keyframes v05-ppuk-drop { 0% { translate: 0 -14px; scale: 1.18; } 60% { translate: 0 1px; scale: .97; } 100% { translate: 0 0; scale: 1; } }
+/* 뻑: 슬롯 박스 크기는 고정, 3장은 슬롯 안에서만 부채꼴로 포갠다 */
+.stage.v05-mat .floor .pile.ppuk-stack { padding: 0 !important; }
+.stage.v05-mat .floor .pile.ppuk-stack .hwatu:nth-child(1) { left: 0; top: 0; margin: 0 !important; transform: rotate(-8deg) !important; z-index: 1; }
+.stage.v05-mat .floor .pile.ppuk-stack .hwatu:nth-child(2) { left: calc(var(--cw) * 0.08); top: 0; margin: 0 !important; transform: rotate(2deg) !important; z-index: 2; box-shadow: -2px 3px 5px rgba(0,0,0,.6) !important; }
+.stage.v05-mat .floor .pile.ppuk-stack .hwatu:nth-child(3) { left: calc(var(--cw) * 0.16); top: 0; margin: 0 !important; transform: rotate(10deg) !important; z-index: 3; box-shadow: -3px 4px 7px rgba(0,0,0,.7), 0 0 0 1.5px rgba(217, 56, 41, .85) !important; }
+.stage.v05-mat .floor .pile.ppuk-drop .hwatu { animation: none; }
+@keyframes v05-ppuk-drop { 0%, 100% { translate: 0 0; scale: 1; } }
 
 /* 4. 패산(덱): 여러 장이 두껍게 쌓인 입체 스택 */
 .stage.v05-mat .deck { overflow: visible; }
@@ -228,8 +273,8 @@
 /* 모바일 가로 */
 @media (orientation: landscape) and (max-height: 520px) {
   .stage.v05-mat { --cw: 40px; }
-  .stage.v05-mat .floor { gap: 6px 9px !important; }
-  .stage.v05-mat .floor[data-dense] { --cw: 33px; gap: 4px 6px !important; }
+  .stage.v05-mat .floor,
+  .stage.v05-mat .floor[data-dense] { gap: max(4px, calc(var(--cw) * .12)) max(4px, calc(var(--cw) * .14)) !important; }
   .stage.v05-mat .who { padding: 2px 6px 2px 3px; }
   .stage.v05-mat .who .portrait { width: 24px !important; }
   .stage.v05-mat .who b { font-size: 12px !important; }

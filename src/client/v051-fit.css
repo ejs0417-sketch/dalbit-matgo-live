@@ -74,7 +74,10 @@
   .stage.v05-mat .deck, .stage.v05-mat .deck .hwatu { width: 32px !important; height: 50px !important; }
   .stage.v05-mat .deck span { font-size: 10px; }
   .stage.v05-mat .floor, .stage.v05-mat .floor[data-dense] {
-    gap: calc(var(--cw) * .16) calc(var(--cw) * .2) !important;
+    display: grid !important;
+    grid-template-columns: repeat(6, var(--cw)) !important;
+    grid-template-rows: repeat(2, calc(var(--cw) * 1.63)) !important;
+    gap: max(4px, calc(var(--cw) * .12)) max(4px, calc(var(--cw) * .14)) !important;
     padding: 2px !important;
   }
   .stage .specials { gap: 4px; }
@@ -159,7 +162,15 @@
   .stage .timer { flex: none; height: 18px !important; font-size: 10px !important; }
   .stage .center-row { flex: 1 1 auto !important; min-height: 0 !important; display: grid !important; grid-template-columns: 40px minmax(0, 1fr) !important; gap: 6px !important; align-items: center !important; overflow: hidden; }
   .stage.v05-mat .deck, .stage.v05-mat .deck .hwatu { width: 38px !important; height: 60px !important; }
-  .stage.v05-mat .floor, .stage.v05-mat .floor[data-dense] { height: 100% !important; min-height: 0 !important; gap: calc(var(--cw) * .16) calc(var(--cw) * .2) !important; padding: 2px !important; }
+  .stage.v05-mat .floor, .stage.v05-mat .floor[data-dense] {
+    display: grid !important;
+    grid-template-columns: repeat(6, var(--cw)) !important;
+    grid-template-rows: repeat(2, calc(var(--cw) * 1.63)) !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    gap: max(4px, calc(var(--cw) * .12)) max(4px, calc(var(--cw) * .14)) !important;
+    padding: 2px !important;
+  }
   .stage .specials { flex: none; display: flex; justify-content: center; gap: 4px; }
   .stage .specials button { height: 24px !important; min-height: 24px !important; font-size: 11px !important; }
   .stage .player.bottom { min-height: 0 !important; padding: 2px 0 !important; overflow: visible !important; display: flex !important; align-items: flex-end !important; }
@@ -465,4 +476,17 @@
     white-space: nowrap;
     overflow: hidden !important;
   }
+}
+
+
+/* v0.5.3: 바닥 매칭/핫 표시는 금빛 발광만 — transform/scale/translate 금지 */
+.stage .floor .hwatu.floor-match-hint,
+.stage .floor .hwatu.hot,
+.stage .floor .hwatu.pick,
+.stage.v05-mat .floor .hwatu.floor-match-hint,
+.stage.v05-mat .floor .hwatu.hot,
+.stage.v05-mat .floor .hwatu.pick {
+  animation: none !important;
+  translate: 0 0 !important;
+  scale: 1 !important;
 }

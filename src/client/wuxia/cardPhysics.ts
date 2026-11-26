@@ -183,16 +183,7 @@ export class CardPhysics {
   }
 
   private thump(at: Rect, big = false) {
-    const stage = this.stage()
-    const felt = stage?.querySelector<HTMLElement>('.felt')
-    if (felt) {
-      const flip = felt.dataset.thump === 'a' ? 'b' : 'a'
-      felt.dataset.thump = flip
-      felt.classList.remove('thump-a', 'thump-b', 'thump-big')
-      void felt.offsetWidth
-      felt.classList.add(`thump-${flip}`)
-      if (big) felt.classList.add('thump-big')
-    }
+    // v0.5.3: 담요(.felt) 전체 흔들림은 깔린 바닥패를 같이 움직이므로 제거. 착지 섬광·파문만 사용.
     // 착지 지점 타격 섬광 (그려진 fx-impact 일러스트) + 먹 파문
     const c = center(at)
     const size = Math.max(at.width, at.height) * (big ? 3.4 : 2.4)

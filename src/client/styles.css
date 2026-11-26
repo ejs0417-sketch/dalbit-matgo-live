@@ -481,8 +481,9 @@ button.auto.on { background: #e6c15a; color: #2a160f; }
 .stage .center-row { width: 100%; min-width: 0; }
 .stage .floor {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 52px));
-  grid-auto-rows: 72px;
+  grid-template-columns: repeat(6, var(--cw, 52px));
+  grid-template-rows: repeat(2, calc(var(--cw, 52px) * 1.63));
+  grid-auto-rows: calc(var(--cw, 52px) * 1.63);
   justify-content: center;
   align-content: center;
   gap: 6px;
@@ -814,18 +815,15 @@ body.calm *, body.calm *::before, body.calm *::after {
   }
   .stage .deck { width: 40px; height: 58px; }
   .stage .deck .hwatu { width: 40px; height: 58px; }
-  .stage .floor {
-    grid-template-columns: repeat(6, minmax(0, 44px));
-    grid-auto-rows: 58px;
+  .stage .floor,
+  .stage .floor[data-dense] {
+    grid-template-columns: repeat(6, var(--cw, 44px));
+    grid-template-rows: repeat(2, calc(var(--cw, 44px) * 1.63));
+    grid-auto-rows: calc(var(--cw, 44px) * 1.63);
     gap: 4px;
     height: 100%;
     align-content: center;
     overflow: hidden;
-  }
-  .stage .floor[data-dense] {
-    grid-template-columns: repeat(8, minmax(0, 34px));
-    grid-auto-rows: 52px;
-    gap: 3px;
   }
   .stage .player.bottom {
     min-height: 0;
@@ -881,8 +879,12 @@ body.calm *, body.calm *::before, body.calm *::after {
   .stage .felt { grid-template-rows: minmax(0, 1fr) 76px; gap: 8px; }
   .stage .board { grid-template-columns: 112px minmax(0, 1fr) 112px; }
   .soundbar input { display: none; }
-  .stage .floor { grid-auto-rows: 58px; grid-template-columns: repeat(6, minmax(0, 46px)); }
-  .stage .floor[data-dense] { grid-template-columns: repeat(8, minmax(0, 32px)); grid-auto-rows: 48px; }
+  .stage .floor,
+  .stage .floor[data-dense] {
+    grid-template-columns: repeat(6, var(--cw, 40px));
+    grid-template-rows: repeat(2, calc(var(--cw, 40px) * 1.63));
+    grid-auto-rows: calc(var(--cw, 40px) * 1.63);
+  }
   .stage .who .portrait, .lobby-profile .portrait { width: 30px; }
   .cast .portrait { width: 26px; }
   .lobby-profile button, .lobby-card input, .bets button, .rulesel button,

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import express from 'express'
 import { WebSocket, WebSocketServer } from 'ws'
 import { chooseAiAction, timeoutAction } from '../engine/ai'
-import { limitForPhase, mayAct, RECONNECT_LIMIT_MS, registerTimeout } from '../engine/clock'
+import { allowHumanTurnTimeout, limitForPhase, mayAct, RECONNECT_LIMIT_MS, registerTimeout } from '../engine/clock'
 import { BETS } from '../engine/cards'
 import { applyAction, closeByForfeit, createGame, decider, nextRound } from '../engine/game'
 import { dealSeonPool, isDaytimeKst, judgeSeon, SEON_PICK_TIMEOUT_MS } from '../engine/seon'
@@ -348,11 +348,21 @@ function releaseTurn(room: Room, who: Seat) {
 
 function beginClock(room: Room, seat: Seat) {
   if (!room.game || room.showdown || decider(room.game) !== seat) return
+  room.awaitingReady = false
+  const hasAiOpponent = room.seats.some((s) => s.ai)
+  // AI 혼자 두기: 인간 플레이어는 타임아웃 자동타패 없이 직접 낼 때까지 기다린다.
+  // (자동치기를 직접 켠 경우는 releaseTurn → actFor 경로를 탄다.)
+  if (!allowHumanTurnTimeout(room.mode, hasAiOpponent)) {
+    room.clockSeat = seat
+    room.clockLimit = 0
+    room.deadlineAt = undefined
+    pushSync(room)
+    return
+  }
   const limit = limitForPhase(room.game.phase)
   room.clockSeat = seat
   room.clockLimit = limit
   room.deadlineAt = Date.now() + limit
-  room.awaitingReady = false
   pushSync(room)
   room.turnTimer = setTimeout(() => actFor(room, seat, true), limit)
 }

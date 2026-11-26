@@ -12,6 +12,7 @@ import { Button } from './ui'
 import { WuxiaEffectsEngine, preloadWuxiaArt, WUXIA_SPRITES } from './wuxia/wuxiaEffects'
 import { CardPhysics } from './wuxia/cardPhysics'
 import { playWuxiaForEvent, resolveWuxia, type GenericGameEvent } from './wuxia/eventAdapter'
+import { emptySlots, fitFixedSlotWidth, floorSlotKey, syncFloorSlots, uniqueFloorKeys, type SlotMap } from './floorSlots'
 import './wuxia/wuxiaEffects.css'
 
 function wait(ms: number) {
@@ -54,23 +55,6 @@ function kindTag(id: string): { text: string; tone: string } {
   return c.pi >= 2 ? { text: '쌍피', tone: 'ssang' } : { text: '피', tone: 'pi' }
 }
 
-/** v0.5.1 바닥 패 크기 자동 맞춤: 바닥 영역(가로×세로)에 모든 더미가 한 장도 안 잘리게 들어가는 최대 카드 폭 */
-function fitFloorWidth(W: number, H: number, piles: { n: number; ppuk: boolean }[], max: number) {
-  if (W <= 0 || H <= 0 || piles.length === 0) return max
-  for (let cw = max; cw >= 18; cw -= 1) {
-    const gx = Math.round(cw * 0.2)
-    const gy = Math.round(cw * 0.16)
-    const ch = cw * 1.63 + 6
-    let rows = 1
-    let x = 0
-    for (const p of piles) {
-      const w = (p.ppuk ? cw * (1 + 0.28 * Math.max(0, p.n - 1)) + 8 : cw * (1 + 0.42 * Math.max(0, p.n - 1))) + 4
-      if (x > 0 && x + gx + w > W) { rows += 1; x = w } else x += (x > 0 ? gx : 0) + w
-    }
-    if (rows * ch + (rows - 1) * gy <= H) return cw
-  }
-  return 18
-}
 
 function lineOf(avatarId: string, key: string, fallback: string) {
   return CHARACTER_LINES[avatarId]?.[key] ?? fallback
@@ -300,7 +284,6 @@ export function Table({
   const [ready, setReady] = useState(false)
   const [impact, setImpact] = useState<ReturnType<typeof bannerFor>>(null)
   const [nonce, setNonce] = useState(0)
-  const [shake, setShake] = useState(false)
   const [hidden, setHidden] = useState<string[]>([])
   const stageRef = useRef<HTMLDivElement | null>(null)
   const phys = useRef<CardPhysics | null>(null)
@@ -338,6 +321,8 @@ export function Table({
   const warned = useRef(-1)
   const fx = useRef<WuxiaEffectsEngine | null>(null)
   const floorRef = useRef<HTMLDivElement | null>(null)
+  const slotMapRef = useRef<SlotMap>(emptySlots())
+  const slotRoundRef = useRef<string>('')
   const [floorCw, setFloorCw] = useState<number | null>(null)
   const scoreRef = useRef<{ you: number; opp: number } | null>(null)
   const [qaChoose, setQaChoose] = useState<{ playedId: string; options: string[] } | null>(null)
@@ -433,7 +418,6 @@ export function Table({
         if (banner) {
           setImpact(banner)
           setNonce((n) => n + 1)
-          setShake(true)
         }
         if (ev.type === 'deal') {
           if (bubbleTimer.current) {
@@ -487,7 +471,6 @@ export function Table({
         setHit(null)
         if (banner) {
           setImpact(null)
-          setShake(false)
         }
       }
       if (!cancel) {
@@ -502,7 +485,6 @@ export function Table({
       cancel = true
       // 연출 도중 새 패킷이 오면 남은 배너·핀·숨김을 즉시 정리 (화면에 배너가 남는 문제 방지)
       setImpact(null)
-      setShake(false)
       phys.current?.clearPins()
     }
   }, [packet.id, view.you])
@@ -533,15 +515,17 @@ export function Table({
   }, [packet.id])
   const yourTurn = (ready || forced) && view.decider === view.you && !packet.showdown
   const ppukMonths = new Set(view.ppuks.map((p) => p.month))
-  // v0.5: 같은 월 바닥패는 실제 화투판처럼 포개서 한 더미로 (뻑은 3장 부채꼴 스택)
+  // v0.5.3: 같은 월 바닥패는 포개되, 12칸 고정 슬롯에 올려 다른 패가 밀리지 않게 한다
+  const floorIds = [...view.floor, ...(view.pending && !view.floor.includes(view.pending.playedId) ? [view.pending.playedId] : [])]
   const floorPiles = (() => {
-    const ids = [...view.floor, ...(view.pending && !view.floor.includes(view.pending.playedId) ? [view.pending.playedId] : [])]
-    const piles: { key: string; month: number; ids: string[] }[] = []
+    const ids = floorIds
+    const piles: { key: string; slotKey: string | number; month: number; ids: string[] }[] = []
     for (const id of ids) {
       const month = CARDS[id]?.month ?? 0
-      const found = month > 0 ? piles.find((p) => p.month === month) : undefined
+      const slotKey = floorSlotKey(id)
+      const found = piles.find((p) => p.slotKey === slotKey)
       if (found) found.ids.push(id)
-      else piles.push({ key: `p-${id}`, month, ids: [id] })
+      else piles.push({ key: `p-${id}`, slotKey, month, ids: [id] })
     }
     // 뻑 더미는 서버가 준 포개진 순서(view.ppuks.cards) 그대로
     for (const p of view.ppuks) {
@@ -553,6 +537,14 @@ export function Table({
     }
     return piles
   })()
+  const slotRoundKey = `${room.code}:${room.games}`
+  if (slotRoundRef.current !== slotRoundKey) {
+    slotRoundRef.current = slotRoundKey
+    slotMapRef.current = syncFloorSlots(slotMapRef.current, uniqueFloorKeys(floorIds), true)
+  } else {
+    slotMapRef.current = syncFloorSlots(slotMapRef.current, uniqueFloorKeys(floorIds), false)
+  }
+  const floorSlots = slotMapRef.current
   const playable = new Set(view.legal.flatMap((a) => (a.type === 'play' ? [a.cardId] : [])))
   const choices = new Set(view.legal.flatMap((a) => (a.type === 'choose' ? [a.cardId] : [])))
   const shakes = view.legal.filter((a) => a.type === 'shake')
@@ -657,8 +649,7 @@ export function Table({
     }
   }, [])
 
-  // v0.5.1 바닥 패 크기 자동 맞춤 (좁은 실기기 높이에서도 바닥 패가 미션·손패와 안 겹치고 안 잘림)
-  const pileKey = floorPiles.map((p) => `${p.month}:${p.ids.length}:${p.month > 0 && ppukMonths.has(p.month) ? 1 : 0}`).join(',')
+  // v0.5.3 바닥 카드 폭은 12칸 고정 그리드·컨테이너 크기만 보고 정한다 (장수 변동으로 출렁이지 않음)
   useLayoutEffect(() => {
     const el = floorRef.current
     if (!el) return
@@ -667,8 +658,7 @@ export function Table({
       const H = (row?.clientHeight ?? el.clientHeight) - 8
       const W = el.clientWidth - 8
       const max = Math.max(30, Math.min(64, Math.floor((window.innerHeight || 400) * 0.14)))
-      const piles = floorPiles.map((p) => ({ n: p.ids.length, ppuk: p.month > 0 && ppukMonths.has(p.month) }))
-      const cw = fitFloorWidth(W, H, piles, max)
+      const cw = fitFixedSlotWidth(W, H, max)
       setFloorCw((old) => (old === cw ? old : cw))
     }
     run()
@@ -676,10 +666,10 @@ export function Table({
     ro.observe(el)
     if (el.parentElement) ro.observe(el.parentElement)
     return () => ro.disconnect()
-  }, [pileKey])
+  }, [])
 
   return (
-    <div ref={stageRef} className={`stage v05-mat${shake ? ' rumble' : ''}${aura}${goLevel >= 4 ? ' quake' : ''}`}>
+    <div ref={stageRef} className={`stage v05-mat${aura}`}>
       {hidden.length > 0 && (
         <style>{hidden.map((id) => `.stage .floor [data-card="${id}"], .stage .wx-caps [data-card="${id}"]`).join(',') + '{visibility:hidden!important}'}</style>
       )}
@@ -759,20 +749,22 @@ export function Table({
                 </button>
                 <div
                   ref={floorRef}
-                  className="floor"
-                  data-dense={floorPiles.length >= 9 ? '1' : undefined}
+                  className="floor fixed-slots"
                   style={floorCw ? { ['--cw' as string]: `${floorCw}px` } : undefined}
                 >
-                  {floorPiles.map((pile) => {
-                    const ppuk = pile.month > 0 && ppukMonths.has(pile.month)
+                  {floorSlots.map((slotKey, slotIndex) => {
+                    const pile = slotKey == null ? undefined : floorPiles.find((p) => p.slotKey === slotKey)
+                    const ppuk = !!(pile && pile.month > 0 && ppukMonths.has(pile.month))
                     return (
                       <div
-                        key={pile.key}
-                        className={`pile${ppuk ? ' ppuk-stack' : ''}${pile.ids.length > 1 ? ' paired' : ''}`}
-                        data-month={pile.month || undefined}
-                        data-n={pile.ids.length}
+                        key={`slot-${slotIndex}`}
+                        className={`floor-slot pile${pile ? '' : ' empty'}${ppuk ? ' ppuk-stack' : ''}${pile && pile.ids.length > 1 ? ' paired' : ''}`}
+                        data-slot={slotIndex}
+                        data-month={pile?.month || undefined}
+                        data-n={pile?.ids.length ?? 0}
+                        data-empty={pile ? undefined : '1'}
                       >
-                        {pile.ids.map((id, i) => (
+                        {pile?.ids.map((id, i) => (
                           <HwatuCard
                             key={id}
                             id={id}
@@ -786,7 +778,6 @@ export function Table({
                       </div>
                     )
                   })}
-                  {view.floor.length === 0 && !view.pending && <p className="floor-empty">바닥이 비었습니다</p>}
                 </div>
               </div>
               {view.phase === 'goStop' && view.decider !== view.you && <p className="hint">상대가 고와 스톱을 저울질합니다</p>}
