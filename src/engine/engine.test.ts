@@ -726,3 +726,33 @@ describe('낮일밤장 선 뽑기 (KST)', () => {
     expect(new Set(pool).size).toBe(6)
   })
 })
+
+describe('v0.5 물리 연출 페이로드', () => {
+  it('뻑 이벤트와 view.ppuks에 포개진 3장 cardIds가 실린다', async () => {
+    const { viewFor } = await import('./view')
+    const state = sandbox()
+    state.floor = ['m01-pi1', 'm08-pi1']
+    state.players[0].hand = ['m01-pi2', 'm02-pi1']
+    state.players[1].hand = ['m04-pi1']
+    state.deck = ['m01-tti', 'm06-pi1']
+    const r = must(applyAction(state, 0, { type: 'play', cardId: 'm01-pi2' }))
+    const ev = r.events.find((e) => e.type === 'ppuk')
+    expect(ev && ev.type === 'ppuk' ? [...(ev.cardIds ?? [])].sort() : []).toEqual(['m01-pi1', 'm01-pi2', 'm01-tti'])
+    const v = viewFor(r.state, 1)
+    expect([...(v.ppuks[0].cards ?? [])].sort()).toEqual(['m01-pi1', 'm01-pi2', 'm01-tti'])
+  })
+
+  it('폭탄 이벤트는 손에서 내는 3장(handIds)과 바닥 목표패(floorIds)를 분리한다', () => {
+    const s = sandbox()
+    s.players[0].hand = ['m04-yeol', 'm04-tti', 'm04-pi1', 'm03-pi1']
+    s.players[1].hand = ['m05-pi1']
+    s.floor = ['m04-pi2', 'm08-pi1']
+    s.deck = ['m06-pi1']
+    const r = must(applyAction(s, 0, { type: 'bomb', month: 4 }))
+    const ev = r.events.find((e) => e.type === 'bomb')
+    if (!ev || ev.type !== 'bomb') throw new Error('bomb event missing')
+    expect(ev.handIds).toEqual(['m04-yeol', 'm04-tti', 'm04-pi1'])
+    expect(ev.floorIds).toEqual(['m04-pi2'])
+    expect(ev.cardIds).toEqual([...ev.handIds!, ...ev.floorIds!])
+  })
+})

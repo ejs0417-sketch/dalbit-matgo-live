@@ -1,0 +1,261 @@
+/* ============================================================================
+   달빛맞고 v0.5.0 — 탈(脫)대시보드: 실제 화투 담요 위 물리 화투판
+   (effects/v05/hwatuMat.css 참고·통합. 네모 패널/그리드 테두리/사이드바 전부 제거)
+   ============================================================================ */
+
+/* 1. 판 전체: 옻칠 원목 상 위에 깔린 실제 융단 담요 */
+.stage.v05-mat {
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(70, 34, 16, .55), rgba(10, 4, 2, .95) 75%),
+    repeating-linear-gradient(92deg, #2a140a 0 3px, #24100a 3px 7px, #2e170c 7px 9px);
+}
+.stage.v05-mat > .topbar,
+.stage.v05-mat > .topbar.slim {
+  background: linear-gradient(180deg, rgba(8, 4, 3, .72), rgba(8, 4, 3, 0)) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.stage.v05-mat .shell .felt,
+.stage.v05-mat .felt {
+  border-radius: 14px !important;
+  padding: clamp(12px, 3.6vh, 22px) clamp(14px, 2.6vw, 30px) !important;
+  background:
+    radial-gradient(ellipse 75% 70% at 50% 48%, rgba(255, 255, 240, .06) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 50%, transparent 58%, rgba(0, 0, 0, .55) 100%),
+    url('/art/table-mat.webp') center / 100% 100% no-repeat,
+    #0f3a2a !important;
+  box-shadow:
+    0 0 0 2px #1a0b05,
+    0 0 0 4px rgba(214, 160, 82, .35),
+    0 14px 40px rgba(0, 0, 0, .8) !important;
+  will-change: transform;
+}
+.stage.v05-mat .felt.thump-a { animation: v05-thump-a .2s cubic-bezier(.3, .7, .3, 1); }
+.stage.v05-mat .felt.thump-b { animation: v05-thump-b .2s cubic-bezier(.3, .7, .3, 1); }
+.stage.v05-mat .felt.thump-big.thump-a, .stage.v05-mat .felt.thump-big.thump-b { animation-duration: .34s; }
+@keyframes v05-thump-a { 0% { transform: translate(0, 0); } 25% { transform: translate(0, 3px) scale(.997); } 55% { transform: translate(-1px, -1px); } 100% { transform: none; } }
+@keyframes v05-thump-b { 0% { transform: translate(0, 0); } 25% { transform: translate(0, 3px) scale(.997); } 55% { transform: translate(1px, -1px); } 100% { transform: none; } }
+
+/* 2. 대시보드 박스 제거: 좌/우/하단 패널은 투명, 담요 위에 직접 */
+.stage.v05-mat .player.top,
+.stage.v05-mat .side,
+.stage.v05-mat .player.bottom,
+.stage.v05-mat .middle,
+.stage.v05-mat .center-row,
+.stage.v05-mat .floor,
+.stage.v05-mat .wx-caps,
+.stage.v05-mat .wx-cap-row {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+.stage.v05-mat .player.top, .stage.v05-mat .side { padding: 2px !important; overflow: visible !important; }
+
+/* 무림 명패: 담요 모서리에 놓인 작은 옻칠 나무 패 */
+.stage.v05-mat .who {
+  flex-direction: row !important;
+  align-items: center !important;
+  text-align: left !important;
+  gap: 6px !important;
+  padding: 3px 8px 3px 4px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #3a1a0e, #1b0b06);
+  box-shadow: 0 0 0 1px rgba(243, 201, 105, .55), 0 0 0 3px rgba(26, 11, 5, .9), 0 6px 12px rgba(0, 0, 0, .6);
+  align-self: flex-start;
+  max-width: 100%;
+}
+.stage.v05-mat .side .who { align-self: flex-end; }
+.stage.v05-mat .who .portrait { width: 30px !important; border-radius: 4px; flex: none; }
+.stage.v05-mat .who > div { display: grid; gap: 0; min-width: 0; }
+.stage.v05-mat .who b { font: 400 13px/1.15 "Song Myung", serif !important; color: #fff3d6 !important; }
+.stage.v05-mat .who span { font-size: 10px !important; color: #e8c98a !important; line-height: 1.2 !important; }
+.stage.v05-mat .who strong.wx-score { font-size: 26px !important; justify-content: flex-start; }
+
+/* 먹은 패: 명패 옆 담요 위에 가지런히 펼쳐진 미니 화투패 더미 */
+.stage.v05-mat .wx-caps { padding: 0 2px !important; }
+.stage.v05-mat .wx-cap-row b {
+  width: 14px; height: 14px; display: grid; place-items: center;
+  font: 700 9px/1 "Song Myung", serif; color: #fff3e6;
+  background: #8e1320; border-radius: 3px; box-shadow: 0 1px 2px rgba(0,0,0,.6);
+}
+.stage.v05-mat .wx-cap-row > span { text-shadow: 0 1px 2px #000; }
+.stage.v05-mat .wx-cap-row:not(.has) { opacity: .35; }
+.stage.v05-mat .wx-cap-stack .hwatu {
+  box-shadow: 0 2px 3px rgba(0, 0, 0, .65), 0 0 0 .5px rgba(0, 0, 0, .5) !important;
+}
+
+/* 3. 바닥패: 담요에 밀착 + 카드 ID 기반 자연 회전 + 같은 월 포개짐 */
+.stage.v05-mat { --cw: 56px; }
+.stage.v05-mat .floor {
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: center;
+  align-items: center;
+  gap: 10px 12px !important;
+  grid-template-columns: none !important;
+  padding: 4px !important;
+}
+.stage.v05-mat .floor .pile { position: relative; display: flex; align-items: center; flex: none; }
+.stage.v05-mat .floor .hwatu {
+  width: var(--cw) !important;
+  height: calc(var(--cw) * 1.63) !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border-radius: 4px !important;
+  transform: rotate(calc(var(--tilt) * .5)) !important;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, .55), 0 1px 0 rgba(255, 255, 255, .18) inset, 0 1px 0 #2a120a !important;
+  transition: transform .14s ease, box-shadow .14s ease;
+}
+.stage.v05-mat .floor .pile .hwatu + .hwatu { margin-left: calc(var(--cw) * -0.58) !important; transform: rotate(calc(var(--tilt) * .5 + 6deg)) translateY(-2px) !important; }
+.stage.v05-mat .floor .hwatu.hot { transform: rotate(0deg) translateY(-3px) scale(1.05) !important; box-shadow: 0 0 0 2px #ffe08a, 0 0 14px rgba(255, 210, 90, .85), 0 8px 12px rgba(0,0,0,.6) !important; }
+.stage.v05-mat .floor .hwatu.pick { animation: v05-pick 1s ease-in-out infinite !important; }
+@keyframes v05-pick { 50% { transform: translateY(-6px) rotate(0deg) scale(1.06); } }
+.stage.v05-mat .floor .hwatu .flag {
+  top: auto; bottom: -6px; left: auto; right: -8px; transform: rotate(12deg);
+  font: 700 10px/1 "Song Myung", serif; padding: 3px 4px; border-radius: 3px;
+  background: #b3121f; border: 1px solid #ffd7c2; box-shadow: 0 0 0 1px #5e0710, 0 2px 4px rgba(0,0,0,.6);
+}
+
+/* 뻑: 같은 월 3장이 촘촘히 포개진 부채꼴 입체 스택 (-8 / +2 / +10deg) */
+.stage.v05-mat .floor .pile.ppuk-stack { padding-right: 6px; }
+.stage.v05-mat .floor .pile.ppuk-stack .hwatu:nth-child(1) { transform: rotate(-8deg) translateY(2px) !important; z-index: 1; }
+.stage.v05-mat .floor .pile.ppuk-stack .hwatu:nth-child(2) { margin-left: calc(var(--cw) * -0.72) !important; transform: rotate(2deg) translateY(-1px) !important; z-index: 2; box-shadow: -2px 3px 5px rgba(0,0,0,.6) !important; }
+.stage.v05-mat .floor .pile.ppuk-stack .hwatu:nth-child(3) { margin-left: calc(var(--cw) * -0.72) !important; transform: rotate(10deg) translateY(-3px) !important; z-index: 3; box-shadow: -3px 4px 7px rgba(0,0,0,.7), 0 0 0 1.5px rgba(217, 56, 41, .85) !important; }
+.stage.v05-mat .floor .pile.ppuk-drop .hwatu { animation: v05-ppuk-drop .42s cubic-bezier(.3, 1.4, .4, 1) both; }
+.stage.v05-mat .floor .pile.ppuk-drop .hwatu:nth-child(2) { animation-delay: 65ms; }
+.stage.v05-mat .floor .pile.ppuk-drop .hwatu:nth-child(3) { animation-delay: 130ms; }
+@keyframes v05-ppuk-drop { 0% { translate: 0 -14px; scale: 1.18; } 60% { translate: 0 1px; scale: .97; } 100% { translate: 0 0; scale: 1; } }
+
+/* 4. 패산(덱): 여러 장이 두껍게 쌓인 입체 스택 */
+.stage.v05-mat .deck { overflow: visible; }
+.stage.v05-mat .deck .hwatu {
+  position: absolute; inset: 0; transform: none !important;
+  box-shadow: 0 1px 0 #3a0d0a, 0 2px 3px rgba(0,0,0,.45) !important;
+  border-radius: 4px !important;
+}
+.stage.v05-mat .deck .hwatu:nth-child(1) { translate: 0 0; rotate: -2deg; }
+.stage.v05-mat .deck .hwatu:nth-child(2) { translate: -1px -2px; rotate: -1deg; }
+.stage.v05-mat .deck .hwatu:nth-child(3) { translate: -2px -4px; rotate: .5deg; }
+.stage.v05-mat .deck .hwatu:nth-child(4) { translate: -3px -6px; rotate: -.5deg; }
+.stage.v05-mat .deck .hwatu:nth-child(5) { translate: -4px -8px; rotate: 1deg; }
+.stage.v05-mat .deck .hwatu:nth-child(6) { translate: -5px -10px; rotate: -1.5deg; }
+.stage.v05-mat .deck .hwatu:last-of-type { box-shadow: 0 1px 0 #3a0d0a, 0 10px 18px rgba(0,0,0,.7) !important; }
+.stage.v05-mat .deck span {
+  z-index: 3; background: rgba(12, 5, 3, .82); border: 1px solid rgba(243, 201, 105, .6);
+  color: #ffe7a8; font-weight: 900;
+}
+
+/* 5. 손패: 담요 아래쪽 가장자리에 놓인 실제 패 */
+.stage.v05-mat .hand.you .hwatu {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, .6), 0 1px 0 rgba(255,255,255,.2) inset !important;
+  border-radius: 5px !important;
+}
+.stage.v05-mat .hand.you .hwatu.live:hover { transform: translateY(-10px) !important; }
+.stage.v05-mat .hand.opp .hwatu { box-shadow: 0 2px 3px rgba(0,0,0,.6) !important; }
+
+/* 미션·타이머: 담요 위에 얹힌 한지 쪽지 */
+.stage.v05-mat .mission {
+  background: linear-gradient(180deg, rgba(246, 236, 212, .94), rgba(226, 210, 176, .94)) !important;
+  color: #2a160c !important;
+  border: 0 !important;
+  border-radius: 2px !important;
+  box-shadow: 0 3px 6px rgba(0,0,0,.5) !important;
+  transform: rotate(-.6deg);
+}
+.stage.v05-mat .mission em { color: #9b1422 !important; font-weight: 900; }
+.stage.v05-mat .mission b, .stage.v05-mat .mission i { color: #2a160c !important; }
+.stage.v05-mat .mission.done { box-shadow: 0 0 0 2px #b3121f, 0 3px 6px rgba(0,0,0,.5) !important; }
+.stage.v05-mat .timer {
+  background: rgba(10, 5, 3, .55) !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+}
+
+/* 6. 비행 레이어: 실제 화투패 오버레이 (pointer-events: none) */
+.wx-fly-layer, .wx-fly-layer * { pointer-events: none !important; }
+.wx-fly-layer { position: fixed; inset: 0; z-index: 58; overflow: hidden; }
+.wx-fly-card {
+  position: fixed;
+  border-radius: 4px;
+  background: #fffaf0;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, .55), 0 1px 0 rgba(255,255,255,.18) inset;
+  will-change: transform;
+  transform-origin: 50% 50%;
+}
+.wx-fly-card img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; }
+.wx-fly-card.pinned { z-index: 1; }
+.wx-fly-card.flying { z-index: 3; }
+.wx-slam-flash {
+  position: fixed; z-index: 2; mix-blend-mode: screen; opacity: 0;
+  animation: v05-flash .42s ease-out forwards;
+}
+.wx-slam-flash.big { animation-duration: .52s; }
+@keyframes v05-flash {
+  0% { opacity: 0; transform: scale(.3) rotate(0deg); }
+  18% { opacity: 1; transform: scale(.85) rotate(10deg); }
+  100% { opacity: 0; transform: scale(1.3) rotate(24deg); }
+}
+.wx-slam-ripple {
+  position: fixed; z-index: 1; width: 10px; height: 10px; margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(10, 30, 20, .55), 0 0 18px 4px rgba(0, 0, 0, .35) inset;
+  animation: v05-ripple .45s cubic-bezier(.2, .7, .3, 1) forwards;
+}
+@keyframes v05-ripple { 0% { transform: scale(1); opacity: .9; } 100% { transform: scale(13, 8); opacity: 0; } }
+
+/* 7. 정산: 노란 CSS 원 → 그려진 엽전 일러스트 분수 */
+.bill .coins.wx-coin-art { position: absolute; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; }
+.bill .coins.wx-coin-art i { display: none !important; }
+.bill .coins.wx-coin-art img {
+  position: absolute; left: 50%; bottom: -20%;
+  width: 120%; max-width: none; mix-blend-mode: screen; opacity: 0;
+  transform-origin: 50% 100%;
+  animation: v05-coin-fountain 1.9s cubic-bezier(.15, .85, .3, 1) forwards;
+}
+.bill .coins.wx-coin-art img.c1 { width: 70%; left: 15%; animation-delay: .15s; }
+.bill .coins.wx-coin-art img.c2 { width: 70%; left: 85%; animation-delay: .3s; }
+@keyframes v05-coin-fountain {
+  0% { opacity: 0; transform: translate(-50%, 30%) scale(.3, .15); filter: brightness(2.2); }
+  22% { opacity: .95; transform: translate(-50%, 0) scale(1, 1.05); filter: brightness(1.3); }
+  100% { opacity: .38; transform: translate(-50%, -8%) scale(1.08, 1.12); filter: brightness(1); }
+}
+
+/* 기존 CSS 도형 이펙트(노란 원 코인비·스파크·선버스트) 완전 제거 */
+.impact .coin-rain, .impact .spark, .impact .sunburst, .impact .bagua, .impact .aura-ring, .impact .slash, .impact .godori-fly, .shock { display: none !important; }
+
+/* 모바일 가로 */
+@media (orientation: landscape) and (max-height: 520px) {
+  .stage.v05-mat { --cw: 40px; }
+  .stage.v05-mat .floor { gap: 6px 9px !important; }
+  .stage.v05-mat .floor[data-dense] { --cw: 33px; gap: 4px 6px !important; }
+  .stage.v05-mat .who { padding: 2px 6px 2px 3px; }
+  .stage.v05-mat .who .portrait { width: 24px !important; }
+  .stage.v05-mat .who b { font-size: 12px !important; }
+  .stage.v05-mat .deck { width: 38px !important; height: 60px !important; }
+  .stage.v05-mat .deck .hwatu { width: 38px !important; height: 60px !important; }
+}
+@media (orientation: landscape) and (max-height: 400px) {
+  .stage.v05-mat { --cw: 37px; }
+}
+@media (orientation: portrait) {
+  .stage.v05-mat { --cw: 44px; }
+}
+
+/* 차례 표시: 박스 외곽선 대신 명패가 금빛으로 달아오름 */
+.stage.v05-mat .live-seat { outline: 0 !important; }
+.stage.v05-mat .player.top.live-seat .who,
+.stage.v05-mat .side.live-seat .who { box-shadow: 0 0 0 1px #ffe08a, 0 0 0 3px rgba(26, 11, 5, .9), 0 0 16px rgba(255, 210, 90, .75), 0 6px 12px rgba(0,0,0,.6); }
+/* 타이머: 길쭉한 진행바 대신 담요 위 작은 향(香) 표식 */
+.stage.v05-mat .timer {
+  align-self: center !important;
+  width: auto !important;
+  min-width: 120px;
+  padding: 0 14px !important;
+  color: #fff3d6;
+  font-weight: 800;
+}
+.stage.v05-mat .timer i { background: linear-gradient(90deg, rgba(255, 190, 90, .55), rgba(255, 240, 200, .25)) !important; border-radius: inherit; }
+.stage.v05-mat .emote-toggle { width: auto !important; align-self: flex-end; padding: 0 12px; background: rgba(12, 5, 3, .6) !important; }
+.stage.v05-mat .who strong.wx-score { font-size: 26px !important; }

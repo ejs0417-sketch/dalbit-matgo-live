@@ -19,7 +19,7 @@ export function viewFor(state: GameState, seat: Seat): PublicView {
     opponentHandCount: them.hand.length,
     opponentRevealed: them.revealed.filter((id) => them.hand.includes(id)),
     floor: [...state.floor],
-    ppuks: state.ppuks.map((p) => ({ month: p.month, owner: p.owner })),
+    ppuks: state.ppuks.map((p) => ({ month: p.month, owner: p.owner, cards: [...p.cards] })),
     yourCapture: [...me.captured],
     opponentCapture: [...them.captured],
     deckCount: state.deck.length,

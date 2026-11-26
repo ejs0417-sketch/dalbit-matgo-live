@@ -336,7 +336,7 @@ function makePpuk(state: GameState, seat: Seat, cards: string[], month: number, 
   state.ppuks.push({ month, owner: seat, cards })
   state.consecutivePpuk += 1
   state.ppukStreak[seat] += 1
-  events.push({ type: 'ppuk', player: seat, month, combo: state.consecutivePpuk })
+  events.push({ type: 'ppuk', player: seat, month, combo: state.consecutivePpuk, cardIds: [...cards] })
   if (state.turnsPlayed[seat] === 0) events.push({ type: 'firstPpuk', player: seat, points: 7 })
   const triple = state.consecutivePpuk >= 3 || state.ppukStreak[seat] >= 3
   if (!triple && state.ppukStreak[seat] === 2) events.push({ type: 'doublePpuk', player: seat, points: 14 })
@@ -569,7 +569,7 @@ function doBomb(state: GameState, seat: Seat, month: number, events: GameEvent[]
   state.consecutivePpuk = 0
   state.ppukStreak[seat] = 0
   state.turnsPlayed[seat] += 1
-  events.push({ type: 'bomb', player: seat, month, cardIds: [...use, ...floorIds] })
+  events.push({ type: 'bomb', player: seat, month, cardIds: [...use, ...floorIds], handIds: [...use], floorIds: [...floorIds] })
   addCards(state, seat, [...use, ...floorIds], events, 'bomb')
   doSteal(state, seat, 1, events)
   const flip = nextFlip(state, seat, events)

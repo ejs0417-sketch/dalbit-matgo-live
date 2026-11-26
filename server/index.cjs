@@ -28930,7 +28930,7 @@ function makePpuk(state, seat, cards, month, events) {
   state.ppuks.push({ month, owner: seat, cards });
   state.consecutivePpuk += 1;
   state.ppukStreak[seat] += 1;
-  events.push({ type: "ppuk", player: seat, month, combo: state.consecutivePpuk });
+  events.push({ type: "ppuk", player: seat, month, combo: state.consecutivePpuk, cardIds: [...cards] });
   if (state.turnsPlayed[seat] === 0) events.push({ type: "firstPpuk", player: seat, points: 7 });
   const triple = state.consecutivePpuk >= 3 || state.ppukStreak[seat] >= 3;
   if (!triple && state.ppukStreak[seat] === 2) events.push({ type: "doublePpuk", player: seat, points: 14 });
@@ -29147,7 +29147,7 @@ function doBomb(state, seat, month, events) {
   state.consecutivePpuk = 0;
   state.ppukStreak[seat] = 0;
   state.turnsPlayed[seat] += 1;
-  events.push({ type: "bomb", player: seat, month, cardIds: [...use, ...floorIds] });
+  events.push({ type: "bomb", player: seat, month, cardIds: [...use, ...floorIds], handIds: [...use], floorIds: [...floorIds] });
   addCards(state, seat, [...use, ...floorIds], events, "bomb");
   doSteal(state, seat, 1, events);
   const flip = nextFlip(state, seat, events);
@@ -29441,7 +29441,7 @@ function viewFor(state, seat) {
     opponentHandCount: them.hand.length,
     opponentRevealed: them.revealed.filter((id) => them.hand.includes(id)),
     floor: [...state.floor],
-    ppuks: state.ppuks.map((p) => ({ month: p.month, owner: p.owner })),
+    ppuks: state.ppuks.map((p) => ({ month: p.month, owner: p.owner, cards: [...p.cards] })),
     yourCapture: [...me.captured],
     opponentCapture: [...them.captured],
     deckCount: state.deck.length,
@@ -29652,7 +29652,14 @@ function broadcastRooms() {
     if (!session.roomCode) send(session.ws, payload);
   }
 }
+var BIG_FX_TYPES = /* @__PURE__ */ new Set(["yaku", "bomb", "shake", "chongtong", "triple", "firstPpuk", "doublePpuk", "sweep", "steal", "mission", "bak"]);
+function hasBigFx(events) {
+  return events.some((e) => BIG_FX_TYPES.has(e.type));
+}
+var BIG_FX_GRACE_MS = 3200;
+var NORMAL_FX_GRACE_MS = 2200;
 function pushRoom(room, events = []) {
+  if (events.length) room.bigFx = hasBigFx(events);
   for (const seat of [0, 1]) {
     const slot = room.seats[seat];
     if (!slot.token) continue;
@@ -29771,7 +29778,7 @@ function armTurn(room) {
     return;
   }
   const aiLike = slot.ai || room.auto[who];
-  room.turnTimer = setTimeout(() => releaseTurn(room, who), aiLike ? 1800 : 12e3);
+  room.turnTimer = setTimeout(() => releaseTurn(room, who), aiLike ? room.bigFx ? BIG_FX_GRACE_MS : NORMAL_FX_GRACE_MS : 12e3);
   pushSync(room);
 }
 function titleFor(kind) {
@@ -30316,7 +30323,7 @@ function onMessage(ws, raw) {
     if (!aiLike && session.seat !== who) return;
     if (room.turnTimer) clearTimeout(room.turnTimer);
     const elapsed = Date.now() - (room.armedAt ?? 0);
-    const wait = aiLike ? Math.max(0, 1800 - elapsed) : 0;
+    const wait = aiLike ? Math.max(0, 350 - elapsed) : 0;
     room.turnTimer = setTimeout(() => releaseTurn(room, who), wait);
     return;
   }

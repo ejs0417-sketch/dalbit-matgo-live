@@ -430,4 +430,65 @@ export class WuxiaAudioEngine {
       osc.start(start); osc.stop(start + dur + 0.02);
     });
   }
+
+  /** v0.5 물리 SFX용: 컨텍스트 현재 시각 (언락 전·음소거면 null) */
+  private now(): number | null {
+    if (!this.ctx || !this.sfxGain || !this.sfxOn) return null;
+    if (this.ctx.state === 'suspended') void this.ctx.resume();
+    return this.ctx.currentTime;
+  }
+
+  // ── 실물 화투패 타격·가져오기·피 뺏기·뻑 포개기·폭탄 3장 동시 투하 SFX ──
+  /** 바닥에 패를 "찰싹! 딱!" 내려치는 소리 */
+  playCardSlap(): void {
+    const t = this.now();
+    if (t === null) return;
+    this.hit(t, 360, 0.055, 0.72);
+    this.hit(t + 0.012, 1180, 0.032, 0.52);
+  }
+
+  /** 바닥 패와 딱 맞물려 부딪히는 화투 "딱!" 소리 */
+  playCardClack(): void {
+    const t = this.now();
+    if (t === null) return;
+    this.hit(t, 1680, 0.028, 0.68);
+    this.hit(t + 0.018, 860, 0.045, 0.55);
+  }
+
+  /** 먹은 패를 내 쪽으로 쓱 쓸어 가져오는 소리 */
+  playCaptureSweep(): void {
+    const t = this.now();
+    if (t === null) return;
+    this.hit(t, 2200, 0.09, 0.26);
+    this.hit(t + 0.07, 1450, 0.04, 0.34);
+  }
+
+  /** 상대방 먹은 피를 빼앗아 오는 "휘익- 딱!" 소리 */
+  playStealPi(): void {
+    const t = this.now();
+    if (t === null) return;
+    this.slash(t, 2100, 0.09, 0.5);
+    this.hit(t + 0.085, 1520, 0.04, 0.62);
+    this.chime(t + 0.09, [880, 1320], 0.11);
+  }
+
+  /** 뻑! 바닥에 3장이 포개지며 묵직하게 박히는 소리 */
+  playPpukStack(): void {
+    const t = this.now();
+    if (t === null) return;
+    this.hit(t, 1280, 0.03, 0.5);
+    this.hit(t + 0.065, 920, 0.04, 0.55);
+    this.taiko(t + 0.13, 108, 0.28, 0.85);
+  }
+
+  /** 폭탄 3장 동시 연타("탁! 탁! 탁!") + 팔괘 폭발음 */
+  playBombTripleSlam(): void {
+    const t = this.now();
+    if (t === null) return;
+    this.hit(t, 1520, 0.032, 0.65);
+    this.hit(t + 0.055, 1680, 0.032, 0.72);
+    this.hit(t + 0.11, 1860, 0.036, 0.8);
+    this.taiko(t + 0.14, 96, 0.38, 0.96);
+    this.gong(t + 0.16, 0.75);
+  }
 }

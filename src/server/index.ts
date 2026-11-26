@@ -105,6 +105,8 @@ interface Room {
   clockLimit?: number
   awaitingReady?: boolean
   armedAt?: number
+  /** v0.5: 직전 배치에 대형 웹툰 컷인/피 뺏기 비행이 있으면 연출 유예(최대 3.2초) */
+  bigFx?: boolean
   forfeitAt?: number
   notice?: string
 }
@@ -235,7 +237,16 @@ function broadcastRooms() {
   }
 }
 
+const BIG_FX_TYPES = new Set(['yaku', 'bomb', 'shake', 'chongtong', 'triple', 'firstPpuk', 'doublePpuk', 'sweep', 'steal', 'mission', 'bak'])
+/** 대형 웹툰 컷인·피 뺏기 비행이 포함된 배치인지 */
+function hasBigFx(events: GameEvent[]) {
+  return events.some((e) => BIG_FX_TYPES.has(e.type))
+}
+const BIG_FX_GRACE_MS = 3200
+const NORMAL_FX_GRACE_MS = 2200
+
 function pushRoom(room: Room, events: GameEvent[] = []) {
+  if (events.length) room.bigFx = hasBigFx(events)
   for (const seat of [0, 1] as const) {
     const slot = room.seats[seat]
     if (!slot.token) continue
@@ -362,7 +373,8 @@ function armTurn(room: Room) {
     return
   }
   const aiLike = slot.ai || room.auto[who]
-  room.turnTimer = setTimeout(() => releaseTurn(room, who), aiLike ? 1800 : 12_000)
+  // AI/자동치기: 클라 ready_turn이 오면 즉시 진행, 안 오면 대형 연출 3.2초 / 일반 2.2초 뒤 진행
+  room.turnTimer = setTimeout(() => releaseTurn(room, who), aiLike ? (room.bigFx ? BIG_FX_GRACE_MS : NORMAL_FX_GRACE_MS) : 12_000)
   pushSync(room)
 }
 
@@ -925,7 +937,8 @@ function onMessage(ws: WebSocket, raw: string) {
     if (!aiLike && session.seat !== who) return
     if (room.turnTimer) clearTimeout(room.turnTimer)
     const elapsed = Date.now() - (room.armedAt ?? 0)
-    const wait = aiLike ? Math.max(0, 1800 - elapsed) : 0
+    // v0.5: 클라이언트 연출(컷인·카드 비행) 종료 신호 → 즉시 진행 (AI는 최소 0.35초 템포만 유지)
+    const wait = aiLike ? Math.max(0, 350 - elapsed) : 0
     room.turnTimer = setTimeout(() => releaseTurn(room, who), wait)
     return
   }

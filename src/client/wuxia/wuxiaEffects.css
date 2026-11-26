@@ -1,203 +1,345 @@
-/* 달빛맞고 : 강호무림 — 무공 초식 × 슬롯 잭팟 이펙트 스타일 (v0.4) */
-/* 모든 연출 레이어는 pointer-events: none 고정 (입력·타이머 방해 금지) */
+/* 달빛맞고 : 강호무림 — 《화산귀환》풍 무협 웹툰 VFX (v0.5)
+   - Canvas/CSS 도형 파티클 전면 폐기 → 실제 그린 일러스트(/art/fx/*.webp) screen 합성
+   - 사선 액션 컷 패널 · 암전 집중선 · 매화 꽃잎 · 붓글씨 의성어
+   - 모든 연출 레이어 pointer-events: none 고정 */
 
 :root {
-  --wx-ink: #120c0e;
+  --wx-ink: #0b0708;
   --wx-gold: #f5c95b;
   --wx-gold-hot: #fff0a8;
   --wx-crimson: #d92b3a;
-  --wx-crimson-deep: #7a0d19;
-  --wx-jade: #26c281;
-  --wx-ice: #5cd6ff;
-  --wx-violet: #b666ff;
+  --wx-plum: #ff7aa2;
 }
 
+.wx-layer, .wx-layer *, .wx-scene, .wx-scene * { pointer-events: none !important; }
 .wx-layer {
   position: fixed;
   inset: 0;
   z-index: 60;
-  pointer-events: none;
   overflow: hidden;
-  display: grid;
-  place-items: center;
 }
+.wx-scene { position: absolute; inset: 0; overflow: hidden; }
+.wx-scene img { user-select: none; -webkit-user-drag: none; }
 
-.wx-canvas {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 61;
-  pointer-events: none;
+/* 암전 */
+.wx-dim {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 50%, rgba(8,4,6,.25) 0%, rgba(4,2,3,.78) 70%, rgba(0,0,0,.9) 100%);
+  animation: wx-dim var(--wx-dur, 1200ms) ease-out both;
 }
+@keyframes wx-dim { 0% { opacity: 0; } 10% { opacity: 1; } 78% { opacity: 1; } 100% { opacity: 0; } }
 
-/* 회전 황금 선버스트 (슬롯 잭팟 광선) */
-.wx-sunburst {
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  width: 160vmax;
-  height: 160vmax;
+/* 집중선(스피드라인) — 웹툰 효과선: 가늘고 날카로운 방사 먹선 */
+.wx-speedlines {
+  position: absolute; left: 50%; top: 50%;
+  width: 180vmax; height: 180vmax;
   transform: translate(-50%, -50%);
-  background: repeating-conic-gradient(
-    from 0deg,
-    rgba(245, 201, 91, 0.24) 0deg 8deg,
-    transparent 8deg 20deg
-  );
-  animation: wx-spin 7s linear infinite, wx-fade-pop 1.5s ease-out forwards;
-  pointer-events: none;
-  z-index: 59;
+  background:
+    repeating-conic-gradient(from 0deg at 50% 50%,
+      rgba(255,255,255,.0) 0deg 1.6deg,
+      rgba(255,255,255,.55) 1.6deg 1.9deg,
+      rgba(255,255,255,0) 1.9deg 3.1deg,
+      rgba(255,255,255,.28) 3.1deg 3.25deg,
+      rgba(255,255,255,0) 3.25deg 5deg);
+  -webkit-mask: radial-gradient(circle at 50% 50%, transparent 0 17vmax, #000 34vmax);
+          mask: radial-gradient(circle at 50% 50%, transparent 0 17vmax, #000 34vmax);
   mix-blend-mode: screen;
+  animation: wx-speed 90ms steps(2) infinite, wx-fade var(--wx-dur, 1200ms) ease-out both;
 }
+@keyframes wx-speed { 50% { transform: translate(-50%, -50%) rotate(1.2deg) scale(1.02); } }
+@keyframes wx-fade { 0% { opacity: 0; } 8% { opacity: 1; } 75% { opacity: .9; } 100% { opacity: 0; } }
 
-.wx-sunburst.ice {
-  background: repeating-conic-gradient(
-    from 0deg,
-    rgba(92, 214, 255, 0.24) 0deg 8deg,
-    transparent 8deg 20deg
-  );
-}
-
-.wx-sunburst.crimson {
-  background: repeating-conic-gradient(
-    from 0deg,
-    rgba(217, 43, 58, 0.28) 0deg 8deg,
-    transparent 8deg 20deg
-  );
-}
-
-/* 전체 화면 플래시 */
-.wx-flash {
-  position: fixed;
-  inset: 0;
-  z-index: 62;
-  pointer-events: none;
-  animation: wx-flash-burst 0.42s ease-out forwards;
-}
-.wx-flash.gold { background: radial-gradient(circle, rgba(255,244,190,0.75), rgba(245,201,91,0.12) 65%, transparent); }
-.wx-flash.crimson { background: radial-gradient(circle, rgba(255,110,120,0.72), rgba(217,43,58,0.16) 65%, transparent); }
-.wx-flash.ice { background: radial-gradient(circle, rgba(190,244,255,0.75), rgba(92,214,255,0.14) 65%, transparent); }
-.wx-flash.jade { background: radial-gradient(circle, rgba(160,255,212,0.7), rgba(38,194,129,0.14) 65%, transparent); }
-.wx-flash.violet { background: radial-gradient(circle, rgba(220,170,255,0.72), rgba(140,50,230,0.18) 65%, transparent); }
-
-/* 초식 컷인 배너 */
-.wx-cutin {
-  position: relative;
-  z-index: 65;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 14px 36px;
-  pointer-events: none;
-  animation: wx-cutin-in 0.28s cubic-bezier(0.18, 1.32, 0.36, 1) both;
-}
-
-.wx-cutin::before {
-  content: "";
+/* 일러스트 스프라이트 공통 — 검은 배경 RGB 아트 → screen 합성 */
+.wx-sprite, .wx-petals, .wx-beat-art {
   position: absolute;
-  inset: -6px -48px;
-  background: linear-gradient(90deg, transparent, rgba(18, 10, 12, 0.88) 18%, rgba(18, 10, 12, 0.92) 82%, transparent);
-  border-top: 2px solid var(--wx-accent, var(--wx-gold));
-  border-bottom: 2px solid var(--wx-accent, var(--wx-gold));
-  box-shadow: 0 0 28px rgba(0, 0, 0, 0.75), 0 0 18px color-mix(in srgb, var(--wx-accent, var(--wx-gold)) 55%, transparent);
-  transform: skewX(-12deg);
-  z-index: -1;
+  mix-blend-mode: screen;
+  object-fit: contain;
+  will-change: transform, opacity;
 }
 
-.wx-cutin-sub {
-  font-family: "Song Myung", serif;
-  font-size: clamp(12px, 2.2vh, 16px);
-  letter-spacing: 0.28em;
-  color: var(--wx-gold-hot);
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+/* ── 사선 액션 컷 패널 ── */
+.wx-panel-frame {
+  position: absolute; left: -6vw; right: -6vw; top: 50%;
+  height: min(58vh, 46vw);
+  transform: translateY(-50%) rotate(-7deg);
+  background: #f6efe2; /* 종이 흰 테두리 */
+  clip-path: polygon(0 14%, 100% 0, 100% 86%, 0 100%);
+  filter: drop-shadow(0 10px 30px rgba(0,0,0,.8));
+  animation: wx-panel-in var(--wx-dur, 1400ms) cubic-bezier(.2,.9,.2,1) both;
+}
+.wx-panel {
+  position: absolute; inset: 6px 0;
+  background: radial-gradient(ellipse at 50% 50%, #1d0d10 0%, #070304 70%);
+  clip-path: polygon(0 14%, 100% 0, 100% 86%, 0 100%);
+  overflow: hidden;
+}
+.wx-panel::after { /* 먹 번짐 내부 테두리 */
+  content: ''; position: absolute; inset: 0;
+  box-shadow: inset 0 0 0 3px #0b0708, inset 0 0 60px rgba(0,0,0,.9);
+}
+.wx-sprite.in-panel {
+  left: 50%; top: 50%; width: 112%; height: 150%;
+  transform: translate(-50%, -50%);
+  object-fit: cover;
+  animation: wx-art-push var(--wx-dur, 1400ms) cubic-bezier(.15,.85,.25,1) both;
+}
+.wx-petals.in-panel {
+  left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; opacity: .9;
+  animation: wx-petal-drift var(--wx-dur, 1400ms) linear both;
+}
+@keyframes wx-panel-in {
+  0% { transform: translate(-120%, -50%) rotate(-7deg) skewX(-18deg); }
+  14% { transform: translate(3%, -50%) rotate(-7deg) skewX(4deg); }
+  22% { transform: translate(0, -50%) rotate(-7deg); }
+  80% { transform: translate(-2%, -50%) rotate(-7deg); opacity: 1; }
+  100% { transform: translate(110%, -50%) rotate(-7deg) skewX(-12deg); opacity: 0; }
+}
+@keyframes wx-art-push {
+  0% { transform: translate(-58%, -50%) scale(1.25); filter: brightness(2.4); }
+  16% { transform: translate(-50%, -50%) scale(1.05); filter: brightness(1.25); }
+  100% { transform: translate(-46%, -50%) scale(1); filter: brightness(1); }
 }
 
-.wx-cutin-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-family: "Black Han Sans", "Song Myung", sans-serif;
-  font-size: clamp(28px, 6.2vh, 54px);
-  line-height: 1.05;
-  letter-spacing: 0.06em;
-  background: linear-gradient(180deg, #fffbe2 0%, var(--wx-accent, #f5c95b) 55%, #b56c12 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 4px 0 rgba(18, 8, 10, 0.95)) drop-shadow(0 0 18px color-mix(in srgb, var(--wx-accent, #f5c95b) 65%, transparent));
+/* ── 프리 스프라이트 모션 (패널 없이 화투판 위로 screen 합성) ── */
+.wx-sprite.free { left: 50%; top: 50%; width: min(108vw, 190vh); height: auto; transform: translate(-50%, -50%); }
+
+/* 고도리: 황금 비조가 대각선 궤적으로 휩쓴다 */
+.wx-sprite.m-sweep {
+  width: min(118vw, 210vh);
+  animation: wx-sweep var(--wx-dur, 1900ms) cubic-bezier(.3,.6,.25,1) both;
+  filter: drop-shadow(0 0 18px rgba(255, 210, 110, .55));
+}
+@keyframes wx-sweep {
+  0% { transform: translate(-150%, -10%) rotate(-9deg) scale(.8); opacity: 0; filter: blur(6px) brightness(2); }
+  12% { opacity: 1; }
+  40% { transform: translate(-52%, -52%) rotate(-5deg) scale(1.02); filter: blur(0) brightness(1.2); }
+  72% { transform: translate(-44%, -58%) rotate(-3deg) scale(1.06); opacity: 1; }
+  100% { transform: translate(60%, -95%) rotate(4deg) scale(1.2); opacity: 0; filter: blur(5px); }
+}
+/* 슬래시: 고속 대각선 일섬 */
+.wx-sprite.m-slash { animation: wx-slash var(--wx-dur, 1000ms) cubic-bezier(.1,.9,.2,1) both; }
+@keyframes wx-slash {
+  0% { transform: translate(-90%, 10%) rotate(-14deg) scaleX(.3); opacity: 0; filter: brightness(3) blur(4px); }
+  10% { transform: translate(-50%, -50%) rotate(-14deg) scaleX(1.12); opacity: 1; filter: brightness(1.8); }
+  55% { transform: translate(-48%, -52%) rotate(-14deg) scaleX(1.02); opacity: 1; filter: brightness(1); }
+  100% { transform: translate(-40%, -58%) rotate(-14deg) scaleX(1.06); opacity: 0; }
+}
+/* 화룡: 포효하며 밀려든다 */
+.wx-sprite.m-roar { animation: wx-roar var(--wx-dur, 1400ms) cubic-bezier(.2,.9,.3,1) both; }
+@keyframes wx-roar {
+  0% { transform: translate(-50%, -30%) scale(.55); opacity: 0; filter: brightness(2.6); }
+  14% { transform: translate(-50%, -50%) scale(1.12); opacity: 1; }
+  24% { transform: translate(-50%, -50%) scale(1.0); }
+  80% { transform: translate(-50%, -52%) scale(1.06); opacity: 1; filter: brightness(1); }
+  100% { transform: translate(-50%, -56%) scale(1.22); opacity: 0; }
+}
+/* 한빙: 옆으로 쓸고 지나가는 서리 검기 */
+.wx-sprite.m-wave { animation: wx-wave var(--wx-dur, 1500ms) cubic-bezier(.2,.8,.3,1) both; }
+@keyframes wx-wave {
+  0% { transform: translate(-110%, -48%) scale(.9); opacity: 0; filter: brightness(2.2) blur(5px); }
+  18% { transform: translate(-52%, -50%) scale(1.04); opacity: 1; filter: none; }
+  80% { transform: translate(-46%, -50%) scale(1.06); opacity: 1; }
+  100% { transform: translate(-20%, -52%) scale(1.1); opacity: 0; }
+}
+/* 천뢰: 번쩍이며 내리꽂힌다 */
+.wx-sprite.m-strike { animation: wx-strike var(--wx-dur, 1500ms) steps(1, end) both, wx-strike-move var(--wx-dur, 1500ms) ease-out both; }
+@keyframes wx-strike {
+  0% { opacity: 0; } 6% { opacity: 1; filter: brightness(3); } 10% { opacity: .3; } 14% { opacity: 1; filter: brightness(1.6); }
+  20% { opacity: .55; } 24% { opacity: 1; filter: brightness(1.1); } 82% { opacity: 1; } 92% { opacity: .4; } 100% { opacity: 0; }
+}
+@keyframes wx-strike-move { 0% { transform: translate(-50%, -75%) scaleY(1.3); } 12% { transform: translate(-50%, -50%) scaleY(1); } 100% { transform: translate(-50%, -48%) scale(1.04); } }
+/* 낙인: 주홍 무림 인장 쾅! */
+.wx-sprite.m-stamp {
+  width: min(80vh, 62vw);
+  animation: wx-stamp var(--wx-dur, 1200ms) cubic-bezier(.3,1.6,.4,1) both;
+}
+@keyframes wx-stamp {
+  0% { transform: translate(-50%, -50%) scale(2.6) rotate(-30deg); opacity: 0; filter: blur(6px); }
+  14% { transform: translate(-50%, -50%) scale(.92) rotate(-6deg); opacity: 1; filter: brightness(1.8); }
+  20% { transform: translate(-50%, -50%) scale(1.04) rotate(-8deg); }
+  26% { transform: translate(-50%, -50%) scale(1) rotate(-8deg); filter: brightness(1); }
+  85% { transform: translate(-50%, -50%) scale(1.02) rotate(-6deg); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.2) rotate(-2deg); opacity: 0; }
+}
+/* 금빛 섬광(소형 이벤트·고) */
+.wx-sprite.m-pop { width: min(70vh, 54vw); animation: wx-pop var(--wx-dur, 1000ms) cubic-bezier(.2,1.4,.4,1) both; }
+.wx-sprite.m-impact { width: min(64vh, 48vw); animation: wx-pop calc(var(--wx-dur, 1000ms) * .55) ease-out both; }
+@keyframes wx-pop {
+  0% { transform: translate(-50%, -50%) scale(.2) rotate(0deg); opacity: 0; }
+  18% { transform: translate(-50%, -50%) scale(1.08) rotate(8deg); opacity: 1; }
+  70% { opacity: .9; }
+  100% { transform: translate(-50%, -50%) scale(1.35) rotate(18deg); opacity: 0; }
+}
+/* 엽전 분수: 실제 그린 엽전 일러스트가 아래에서 솟구친다 */
+.wx-sprite.fountain { top: auto; bottom: -8vh; width: min(96vw, 170vh); transform-origin: 50% 100%; }
+.wx-sprite.fountain.f0 { animation: wx-fountain var(--wx-dur, 1800ms) cubic-bezier(.15,.85,.3,1) both; }
+.wx-sprite.fountain.f1 { width: min(60vw, 100vh); left: 22%; animation: wx-fountain var(--wx-dur, 1800ms) cubic-bezier(.15,.85,.3,1) 120ms both; }
+.wx-sprite.fountain.f2 { width: min(60vw, 100vh); left: 78%; animation: wx-fountain var(--wx-dur, 1800ms) cubic-bezier(.15,.85,.3,1) 220ms both; }
+@keyframes wx-fountain {
+  0% { transform: translate(-50%, 40%) scale(.3, .1); opacity: 0; filter: brightness(2.6); }
+  18% { transform: translate(-50%, 0) scale(1.05, 1.1); opacity: 1; filter: brightness(1.4); }
+  65% { transform: translate(-50%, -6%) scale(1.08, 1.14); opacity: 1; filter: brightness(1); }
+  100% { transform: translate(-50%, -14%) scale(1.15, 1.2); opacity: 0; }
 }
 
-/* 고·도·리 3박자 붓글씨 */
-.wx-beat-chars {
-  display: flex;
-  gap: 12px;
+/* ── 매화 꽃잎 폭풍 (화산귀환 시그니처) ── */
+.wx-petals.free { width: min(120vw, 210vh); left: 50%; top: 50%; opacity: .95; }
+.wx-petals.free.p0 { animation: wx-petal-a var(--wx-dur, 1400ms) cubic-bezier(.2,.7,.3,1) both; }
+.wx-petals.free.p1 { width: min(80vw, 140vh); animation: wx-petal-b var(--wx-dur, 1400ms) cubic-bezier(.2,.7,.3,1) 90ms both; }
+@keyframes wx-petal-a {
+  0% { transform: translate(-110%, -10%) rotate(-6deg) scale(.8); opacity: 0; }
+  15% { opacity: .95; }
+  100% { transform: translate(-20%, -80%) rotate(4deg) scale(1.15); opacity: 0; }
 }
-.wx-beat-char {
-  display: inline-block;
+@keyframes wx-petal-b {
+  0% { transform: translate(-30%, 10%) rotate(170deg) scale(.7); opacity: 0; }
+  20% { opacity: .85; }
+  100% { transform: translate(-80%, -70%) rotate(185deg) scale(1.05); opacity: 0; }
+}
+@keyframes wx-petal-drift { 0% { transform: translate(-25%, 10%); opacity: 0; } 15% { opacity: .9; } 100% { transform: translate(20%, -15%); opacity: 0; } }
+
+/* ── 고! · 도! · 리! 3박자 사선 컷 ── */
+.wx-beat {
+  position: absolute; top: 10%; height: 62%; width: 36%;
   opacity: 0;
-  transform: scale(2.4) rotate(-10deg);
-  animation: wx-stamp-beat 0.32s cubic-bezier(0.2, 1.4, 0.35, 1) forwards;
+  animation: wx-beat-in var(--wx-dur, 1900ms) cubic-bezier(.2,1.2,.3,1) both;
 }
-.wx-beat-char:nth-child(1) { animation-delay: 0ms; }
-.wx-beat-char:nth-child(2) { animation-delay: 220ms; }
-.wx-beat-char:nth-child(3) { animation-delay: 440ms; }
-
-/* 주홍 낙관 도장 */
-.wx-seal {
-  display: inline-grid;
-  place-items: center;
-  min-width: 34px;
-  height: 34px;
-  padding: 2px 6px;
-  border: 2.5px solid #ff5d6b;
-  border-radius: 6px;
-  background: linear-gradient(180deg, #d92b3a, #8d0e1a);
-  color: #fff6e0;
-  font-family: "Song Myung", serif;
-  font-size: 15px;
-  font-weight: 900;
-  line-height: 1;
-  box-shadow: 0 3px 0 #4a060d, 0 0 14px rgba(217, 43, 58, 0.75);
+.wx-beat.b0 { left: 2%; animation-delay: 0ms; }
+.wx-beat.b1 { left: 32%; top: 18%; animation-delay: 200ms; }
+.wx-beat.b2 { left: 62%; top: 8%; animation-delay: 400ms; }
+.wx-beat-panel {
+  position: absolute; inset: 0;
+  background: #f6efe2;
+  clip-path: polygon(14% 0, 100% 4%, 86% 100%, 0 95%);
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,.8));
+}
+.wx-beat-panel::before {
+  content: ''; position: absolute; inset: 5px;
+  background: #080405;
+  clip-path: polygon(14% 0, 100% 4%, 86% 100%, 0 95%);
+}
+.wx-beat-art { left: 5px; right: 5px; top: 5px; bottom: 5px; width: calc(100% - 10px); height: calc(100% - 10px); object-fit: cover; clip-path: polygon(14% 0, 100% 4%, 86% 100%, 0 95%); }
+.wx-beat.b0 .wx-beat-art { object-position: 15% 50%; }
+.wx-beat.b1 .wx-beat-art { object-position: 50% 40%; }
+.wx-beat.b2 .wx-beat-art { object-position: 85% 50%; }
+.wx-beat-text {
+  position: absolute; left: 0; right: 0; bottom: 4%;
+  text-align: center;
+  font: 400 clamp(46px, 13vh, 110px)/1 "East Sea Dokdo", "Black Han Sans", sans-serif;
+  color: #fff7d6;
+  -webkit-text-stroke: 2px #1a0b05;
+  text-shadow: 0 0 14px rgba(255, 196, 80, .95), 4px 5px 0 #8a1020;
   transform: rotate(-8deg);
-  animation: wx-seal-slam 0.28s cubic-bezier(0.2, 1.5, 0.4, 1) 0.12s both;
+}
+@keyframes wx-beat-in {
+  0% { opacity: 0; transform: translateY(-30%) scale(1.5) rotate(6deg); }
+  10% { opacity: 1; transform: translateY(0) scale(.96) rotate(-2deg); }
+  16% { transform: scale(1) rotate(-2deg); }
+  78% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(8%) scale(1.03) rotate(-2deg); }
 }
 
+/* ── 붓글씨 의성어 ── */
+.wx-sfx {
+  position: absolute; right: 6%; top: 8%;
+  font: 400 clamp(54px, 17vh, 150px)/1 "East Sea Dokdo", "Black Han Sans", sans-serif;
+  color: #fff;
+  -webkit-text-stroke: 3px #0b0708;
+  paint-order: stroke fill;
+  text-shadow: 0 0 22px var(--wx-accent, #ffd86b), 5px 6px 0 rgba(0,0,0,.85);
+  transform: rotate(-12deg);
+  letter-spacing: -.02em;
+  white-space: nowrap;
+  animation: wx-sfx-slam var(--wx-dur, 1200ms) cubic-bezier(.2,1.5,.35,1) 80ms both;
+}
+@keyframes wx-sfx-slam {
+  0% { opacity: 0; transform: rotate(-12deg) scale(2.4); filter: blur(4px); }
+  14% { opacity: 1; transform: rotate(-12deg) scale(.92); filter: none; }
+  22% { transform: rotate(-12deg) scale(1.04); }
+  80% { opacity: 1; transform: rotate(-11deg) scale(1.06); }
+  100% { opacity: 0; transform: rotate(-10deg) scale(1.15) translateY(-10%); }
+}
+
+/* ── 웹툰 자막 캡션 (먹 붓글씨 타이틀 + 주홍 낙관) ── */
+.wx-cutin {
+  position: absolute; left: 50%; bottom: 12%;
+  transform: translateX(-50%);
+  display: grid; justify-items: center; gap: 2px;
+  text-align: center;
+  white-space: nowrap;
+  animation: wx-caption var(--wx-dur, 1200ms) cubic-bezier(.2,1.2,.3,1) both;
+}
+.motion-sweep .wx-cutin { bottom: 6%; }
+.wx-cutin-sub {
+  font: 700 clamp(12px, 3vh, 18px)/1 "Song Myung", serif;
+  color: #f6efe2;
+  letter-spacing: .3em;
+  padding: 3px 12px;
+  background: #0b0708;
+  border: 1px solid rgba(246, 239, 226, .6);
+}
+.wx-cutin-title {
+  position: relative;
+  font: 400 clamp(40px, 12vh, 92px)/1.05 "Black Han Sans", sans-serif;
+  color: #fff;
+  -webkit-text-stroke: 2px #0b0708;
+  paint-order: stroke fill;
+  text-shadow: 0 0 18px var(--wx-accent, #ffd86b), 4px 5px 0 #0b0708;
+  transform: skewX(-8deg);
+}
+.wx-seal {
+  position: absolute; right: -0.9em; top: -0.35em;
+  width: 1.25em; height: 1.25em;
+  display: grid; place-items: center;
+  font: 700 .36em/1 "Song Myung", serif;
+  color: #fff3e6;
+  background: #b3121f;
+  border: 2px solid #ffd7c2;
+  border-radius: 6px;
+  transform: rotate(10deg);
+  box-shadow: 0 0 0 2px #5e0710, 0 4px 10px rgba(0,0,0,.6);
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+  animation: wx-seal-slam .4s cubic-bezier(.3,1.7,.4,1) .25s both;
+}
 .wx-cutin-badge {
   margin-top: 2px;
-  padding: 3px 14px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #7a0d19, #d92b3a, #7a0d19);
-  border: 1px solid #ffd875;
-  color: #fff8dc;
-  font-size: clamp(12px, 2vh, 15px);
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  box-shadow: 0 0 16px rgba(245, 201, 91, 0.55);
+  font: 900 clamp(11px, 2.6vh, 15px)/1 "Noto Sans KR", sans-serif;
+  color: #1a0b05;
+  background: linear-gradient(180deg, #fff1b8, #e6b33d);
+  padding: 4px 12px;
+  clip-path: polygon(6% 0, 100% 0, 94% 100%, 0 100%);
+}
+@keyframes wx-caption {
+  0% { opacity: 0; transform: translateX(-50%) translateY(30%) scale(1.3); }
+  14% { opacity: 1; transform: translateX(-50%) translateY(0) scale(.96); }
+  20% { transform: translateX(-50%) scale(1); }
+  82% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-12%); }
+}
+@keyframes wx-seal-slam {
+  0% { opacity: 0; transform: rotate(10deg) scale(3); }
+  100% { opacity: 1; transform: rotate(10deg) scale(1); }
 }
 
-/* 팔괘 진법 (폭탄 / 삼연뻑) */
-.wx-bagua {
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  width: min(56vmin, 260px);
-  height: min(56vmin, 260px);
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  border: 3px solid rgba(245, 201, 91, 0.9);
-  box-shadow:
-    inset 0 0 34px rgba(217, 43, 58, 0.85),
-    0 0 42px rgba(245, 201, 91, 0.85);
-  background:
-    radial-gradient(circle, rgba(255, 214, 112, 0.28) 0%, rgba(217, 43, 58, 0.22) 48%, transparent 72%),
-    repeating-conic-gradient(from 0deg, rgba(255, 224, 138, 0.45) 0deg 3deg, transparent 3deg 45deg);
-  animation: wx-bagua-expand 0.95s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  pointer-events: none;
-  z-index: 60;
+/* 저사양/연출↓ */
+.wx-scene.reduced .wx-sprite, .wx-scene.reduced .wx-panel-frame, .wx-scene.reduced .wx-sfx, .wx-scene.reduced .wx-cutin, .wx-scene.reduced .wx-beat {
+  animation-duration: .5s !important;
 }
 
-/* 고(Go) 단계별 테두리 내공 체이스 오라 */
+@media (orientation: landscape) and (max-height: 520px) {
+  .wx-panel-frame { height: 66vh; }
+  .wx-cutin { bottom: 7%; }
+  .wx-sfx { top: 4%; right: 4%; }
+}
+@media (orientation: portrait) {
+  .wx-panel-frame { height: 34vh; left: -20vw; right: -20vw; }
+  .wx-sprite.free { width: 160vw; }
+  .wx-beat { width: 46%; height: 40%; top: 22%; }
+  .wx-beat.b1 { left: 27%; top: 32%; }
+  .wx-beat.b2 { left: 52%; top: 20%; }
+}
+
 .wx-go-aura {
   position: fixed;
   inset: 0;
@@ -320,7 +462,19 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wx-sunburst, .wx-bagua, .wx-go-aura, .wx-shake-sm, .wx-shake-md, .wx-shake-lg {
+  .wx-go-aura, .wx-shake-sm, .wx-shake-md, .wx-shake-lg {
     animation: none !important;
   }
+}
+
+/* 그려진 웹툰 집중선 일러스트 (fx-speedlines.webp) */
+.wx-sprite.free.wx-speed-art {
+  width: 100vw; height: 100vh; object-fit: cover; left: 0; top: 0; transform: none;
+  animation: wx-speed-art var(--wx-dur, 1200ms) ease-out both;
+}
+@keyframes wx-speed-art {
+  0% { opacity: 0; transform: scale(1.35); }
+  10% { opacity: 1; transform: scale(1.05); }
+  78% { opacity: .9; transform: scale(1); }
+  100% { opacity: 0; transform: scale(.98); }
 }

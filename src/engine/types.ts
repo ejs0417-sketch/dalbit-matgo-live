@@ -148,7 +148,7 @@ export type GameEvent =
   | { type: 'chongtong'; player: Seat; month: number; cardIds: string[] }
   | { type: 'chongtongPass'; player: Seat }
   | { type: 'shake'; player: Seat; month: number; cardIds: string[] }
-  | { type: 'bomb'; player: Seat; month: number; cardIds: string[] }
+  | { type: 'bomb'; player: Seat; month: number; cardIds: string[]; handIds?: string[]; floorIds?: string[] }
   | { type: 'play'; player: Seat; cardId: string }
   | { type: 'token'; player: Seat }
   | { type: 'bonusPlay'; player: Seat; cardId: string }
@@ -160,7 +160,7 @@ export type GameEvent =
   | { type: 'debtPay'; player: Seat; to: Seat; cardIds: string[] }
   | { type: 'drop'; player: Seat; cardId: string }
   | { type: 'jjok'; player: Seat }
-  | { type: 'ppuk'; player: Seat; month: number; combo: number }
+  | { type: 'ppuk'; player: Seat; month: number; combo: number; cardIds?: string[] }
   | { type: 'firstPpuk'; player: Seat; points: 7 }
   | { type: 'doublePpuk'; player: Seat; points: 14 }
   | { type: 'ownPpuk'; player: Seat; month: number }
@@ -191,7 +191,7 @@ export interface PublicView {
   opponentHandCount: number
   opponentRevealed: string[]
   floor: string[]
-  ppuks: { month: number; owner: Seat }[]
+  ppuks: { month: number; owner: Seat; cards?: string[] }[]
   yourCapture: string[]
   opponentCapture: string[]
   deckCount: number

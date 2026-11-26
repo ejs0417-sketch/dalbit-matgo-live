@@ -40,6 +40,18 @@ class AudioFacade {
     this.engine.play(LEGACY[name] ?? name)
   }
 
+  /** v0.5 실물 화투 물리 SFX */
+  physics(kind: 'slap' | 'clack' | 'sweep' | 'steal' | 'ppukStack' | 'bombTriple') {
+    if (!this.sfxOn) return
+    const e = this.engine
+    if (kind === 'slap') e.playCardSlap()
+    else if (kind === 'clack') e.playCardClack()
+    else if (kind === 'sweep') e.playCaptureSweep()
+    else if (kind === 'steal') e.playStealPi()
+    else if (kind === 'ppukStack') e.playPpukStack()
+    else e.playBombTripleSlam()
+  }
+
   setScene(scene: BgmScene) {
     this.engine.setScene(scene)
   }

@@ -9,7 +9,8 @@ import { SoundIcons } from './lobby'
 import { Portrait } from './characters'
 import type { EmoteMsg, RoomInfo, Showdown, TablePacket } from './model'
 import { Button } from './ui'
-import { WuxiaEffectsEngine } from './wuxia/wuxiaEffects'
+import { WuxiaEffectsEngine, preloadWuxiaArt, WUXIA_SPRITES } from './wuxia/wuxiaEffects'
+import { CardPhysics } from './wuxia/cardPhysics'
 import { playWuxiaForEvent, resolveWuxia, type GenericGameEvent } from './wuxia/eventAdapter'
 import './wuxia/wuxiaEffects.css'
 
@@ -147,10 +148,11 @@ function Bill({
   return (
     <div className="bill">
       {moneyOn && !showdown.nagari && (
-        <div className="coins" aria-hidden>
-          {Array.from({ length: 14 }, (_, i) => (
-            <i key={i} style={{ left: `${6 + ((i * 7) % 88)}%`, animationDelay: `${i * 0.06}s` }} />
-          ))}
+        <div className="coins wx-coin-art" aria-hidden>
+          {/* v0.5: 노란 CSS 원 대신 실제 그린 엽전 일러스트 분수 */}
+          <img className="c0" src={WUXIA_SPRITES['coin-jackpot']} alt="" draggable={false} />
+          <img className="c1" src={WUXIA_SPRITES['coin-jackpot']} alt="" draggable={false} />
+          <img className="c2" src={WUXIA_SPRITES['coin-jackpot']} alt="" draggable={false} />
         </div>
       )}
       <div className="bill-hero">
@@ -262,19 +264,44 @@ export function Table({
   const [impact, setImpact] = useState<ReturnType<typeof bannerFor>>(null)
   const [nonce, setNonce] = useState(0)
   const [shake, setShake] = useState(false)
-  const [ghost, setGhost] = useState<{ id: string; from: string } | null>(null)
+  const [hidden, setHidden] = useState<string[]>([])
+  const stageRef = useRef<HTMLDivElement | null>(null)
+  const phys = useRef<CardPhysics | null>(null)
   const [bubble, setBubble] = useState<{ who: Seat; text: string; mood: Mood } | null>(null)
-  const [hit, setHit] = useState<'kung' | 'jjak' | null>(null)
+  const [, setHit] = useState<'kung' | 'jjak' | null>(null)
   const [tick, setTick] = useState(Date.now())
   const [focusMonth, setFocusMonth] = useState<number | null>(null)
   const [emoteOpen, setEmoteOpen] = useState(false)
   const warned = useRef(-1)
   const fx = useRef<WuxiaEffectsEngine | null>(null)
 
+  // v0.5: 실물 화투 물리 모션 엔진 (DOM 좌표 기반 오버레이 비행, pointer-events: none)
+  useEffect(() => {
+    preloadWuxiaArt()
+    const p = new CardPhysics(() => stageRef.current)
+    phys.current = p
+    const onResize = () => p.snapshot()
+    window.addEventListener('resize', onResize)
+    return () => {
+      window.removeEventListener('resize', onResize)
+      p.destroy()
+      if (phys.current === p) phys.current = null
+    }
+  }, [])
+
+  // 연출 배치가 끝나면 현재 카드 좌표를 기억 (다음 배치의 출발 좌표)
+  useEffect(() => {
+    if (!ready) return
+    const id = requestAnimationFrame(() => phys.current?.snapshot())
+    return () => cancelAnimationFrame(id)
+  }, [ready, packet.id])
+
   // v0.4.2: 무협 초식 이펙트 엔진 (모든 레이어 pointer-events: none)
   useEffect(() => {
     const engine = new WuxiaEffectsEngine(document.body)
     fx.current = engine
+    // QA 훅: 실서버 검증 스크립트가 컷인을 직접 재생해 볼 수 있게 노출 (읽기 전용 연출 엔진)
+    ;(window as unknown as { __dalbitFx?: WuxiaEffectsEngine }).__dalbitFx = engine
     return () => {
       engine.destroy()
       if (fx.current === engine) fx.current = null
@@ -294,6 +321,18 @@ export function Table({
       setReady(false)
       let playedId = ''
       const batch = packet.events as unknown as GenericGameEvent[]
+      // v0.5: 이번 배치에서 날아올 카드는 착지 전까지 바닥/먹은 패 줄에서 숨김
+      const incoming = new Set<string>()
+      for (const ev of packet.events) {
+        if (ev.type === 'play' || ev.type === 'flip' || ev.type === 'bonusPlay' || ev.type === 'bonusDraw') incoming.add(ev.cardId)
+        if (ev.type === 'bomb') (ev.handIds ?? ev.cardIds).forEach((id) => incoming.add(id))
+        if (ev.type === 'capture' || ev.type === 'steal' || ev.type === 'debtPay') ev.cardIds.forEach((id) => incoming.add(id))
+      }
+      const physics = phys.current
+      const reveal = (ids: string[]) => setHidden((h) => h.filter((x) => !ids.includes(x)))
+      setHidden(physics && packet.events.length ? [...incoming] : [])
+      if (physics && packet.events.length) physics.beginBatch()
+      const sideOf = (seat: number): 'you' | 'opp' => (seat === view.you ? 'you' : 'opp')
       for (const ev of packet.events) {
         if (cancel) return
         const gev = ev as unknown as GenericGameEvent
@@ -305,7 +344,8 @@ export function Table({
         const banner = wx.cutin ? null : bannerFor(ev)
         const sound = soundFor(ev)
         const skipKung = ev.type === 'drop' && ev.cardId === playedId
-        if (sound && !skipKung) audio.play(sound)
+        const physical = physics && (ev.type === 'play' || ev.type === 'flip' || ev.type === 'capture' || ev.type === 'steal' || ev.type === 'debtPay' || ev.type === 'bomb' || ev.type === 'bonusPlay' || ev.type === 'drop')
+        if (sound && !skipKung && !physical) audio.play(sound)
         if (ev.type === 'play') {
           playedId = ev.cardId
           setHit('kung')
@@ -320,15 +360,45 @@ export function Table({
         const speaker = room.seats.find((seat) => 'player' in ev && seat.seat === (ev as { player?: number }).player)
         const said = speech(ev, speaker?.avatarId ?? 'bokman')
         if (said) setBubble(said)
-        if (ev.type === 'play') setGhost({ id: ev.cardId, from: ev.player === view.you ? 'you' : 'opp' })
-        if (ev.type === 'flip') setGhost({ id: ev.cardId, from: 'deck' })
-        if (ev.type === 'capture' && ev.cardIds[0]) setGhost({ id: ev.cardIds[0], from: 'floor' })
+        // ── v0.5 실물 화투 물리 모션 ──
+        let physMs = 0
+        if (physics) {
+          const t0 = performance.now()
+          if (ev.type === 'play' || ev.type === 'bonusPlay') {
+            const id = ev.cardId
+            await physics.slam(id, sideOf(ev.player), (stack) => { audio.physics(stack ? 'clack' : 'slap'); reveal([id]) })
+          } else if (ev.type === 'flip') {
+            const id = ev.cardId
+            await physics.slam(id, 'deck', (stack) => { audio.physics(stack ? 'clack' : 'slap'); reveal([id]) })
+          } else if (ev.type === 'bomb') {
+            const hand = ev.handIds ?? ev.cardIds.filter((id) => CARDS[id]?.month === ev.month).slice(0, 3)
+            const floorIds = ev.floorIds ?? ev.cardIds.filter((id) => !hand.includes(id))
+            audio.physics('bombTriple')
+            await physics.bombTriple(hand, floorIds, sideOf(ev.player))
+            reveal(hand)
+          } else if (ev.type === 'capture') {
+            audio.physics('sweep')
+            await physics.captureSweep(ev.cardIds, sideOf(ev.player))
+            reveal(ev.cardIds)
+          } else if ((ev.type === 'steal' || ev.type === 'debtPay') && ev.cardIds.length) {
+            const toSeat = ev.type === 'steal' ? ev.player : ev.to
+            const fromSeat = ev.type === 'steal' ? ev.from : ev.player
+            audio.physics('steal')
+            await physics.stealPi(ev.cardIds, sideOf(fromSeat), sideOf(toSeat))
+            reveal(ev.cardIds)
+          } else if (ev.type === 'ppuk') {
+            audio.physics('ppukStack')
+            physics.ppukStack(ev.month)
+          }
+          physMs = performance.now() - t0
+          if (cancel) return
+        }
         const tier = ev.type === 'go' ? goIntensity(ev.count) : 0
         const base = ev.type === 'yaku' ? 1500 : tier >= 4 ? 1300 : tier === 3 ? 1100 : banner ? 920 : ev.type === 'deal' ? 620 : 280
-        const long = wx.cutin ? Math.max(base, Math.min(wxMs, 1900)) : base
+        const physicalBase = physMs > 0 ? 90 : base
+        const long = wx.cutin ? Math.max(physicalBase, Math.min(wxMs, 1900) - physMs) : physicalBase
         await wait(long)
         if (cancel) return
-        setGhost(null)
         setHit(null)
         if (banner) {
           setImpact(null)
@@ -336,8 +406,11 @@ export function Table({
         }
       }
       if (!cancel) {
+        physics?.clearPins()
+        setHidden([])
         setReady(true)
-        if (view.decider === view.you && view.phase !== 'ended') onArmed()
+        // v0.5: 연출이 끝났음을 서버에 알림 (내 차례 → 시계 시작, AI 차례 → 즉시 진행; 상대 PvP 차례는 서버가 무시)
+        if (view.phase !== 'ended') onArmed()
       }
     })()
     return () => {
@@ -368,6 +441,26 @@ export function Table({
   const yourTurn = (ready || forced) && view.decider === view.you && !packet.showdown
   const floorMonths = new Set(view.floor.map((id) => CARDS[id]?.month ?? 0).filter((month) => month > 0))
   const ppukMonths = new Set(view.ppuks.map((p) => p.month))
+  // v0.5: 같은 월 바닥패는 실제 화투판처럼 포개서 한 더미로 (뻑은 3장 부채꼴 스택)
+  const floorPiles = (() => {
+    const ids = [...view.floor, ...(view.pending && !view.floor.includes(view.pending.playedId) ? [view.pending.playedId] : [])]
+    const piles: { key: string; month: number; ids: string[] }[] = []
+    for (const id of ids) {
+      const month = CARDS[id]?.month ?? 0
+      const found = month > 0 ? piles.find((p) => p.month === month) : undefined
+      if (found) found.ids.push(id)
+      else piles.push({ key: `p-${id}`, month, ids: [id] })
+    }
+    // 뻑 더미는 서버가 준 포개진 순서(view.ppuks.cards) 그대로
+    for (const p of view.ppuks) {
+      const pile = piles.find((x) => x.month === p.month)
+      if (pile && p.cards?.length) {
+        const order = p.cards.filter((id) => pile.ids.includes(id))
+        pile.ids = [...order, ...pile.ids.filter((id) => !order.includes(id))]
+      }
+    }
+    return piles
+  })()
   const playable = new Set(view.legal.flatMap((a) => (a.type === 'play' ? [a.cardId] : [])))
   const choices = new Set(view.legal.flatMap((a) => (a.type === 'choose' ? [a.cardId] : [])))
   const shakes = view.legal.filter((a) => a.type === 'shake')
@@ -412,8 +505,10 @@ export function Table({
   if (!clock) warned.current = -1
 
   return (
-    <div className={`stage${shake || hit === 'kung' ? ' rumble' : ''}${hit === 'jjak' ? ' snap' : ''}${aura}${goLevel >= 4 ? ' quake' : ''}`}>
-      {hit && <div className={`shock shock-${hit}`} />}
+    <div ref={stageRef} className={`stage v05-mat${shake ? ' rumble' : ''}${aura}${goLevel >= 4 ? ' quake' : ''}`}>
+      {hidden.length > 0 && (
+        <style>{hidden.map((id) => `.stage .floor [data-card="${id}"], .stage .wx-caps [data-card="${id}"]`).join(',') + '{visibility:hidden!important}'}</style>
+      )}
       <header className="topbar slim">
         <div className="brand">달빛맞고</div>
         <div className="stat">
@@ -477,26 +572,35 @@ export function Table({
                 <i>{view.missionProgress.current}/{view.missionProgress.target}</i>
               </div>
               <div className="center-row">
-                <button type="button" className="deck" aria-label={`더미 ${view.deckCount}장`}>
-                  <HwatuCard back />
-                  <HwatuCard back />
+                <button type="button" className="deck" aria-label={`더미 ${view.deckCount}장`} data-layers={Math.min(6, Math.max(1, Math.ceil(view.deckCount / 4)))}>
+                  {Array.from({ length: Math.min(6, Math.max(1, Math.ceil(view.deckCount / 4))) }, (_, i) => (
+                    <HwatuCard key={i} back />
+                  ))}
                   <span>{view.deckCount}</span>
                 </button>
-                <div className="floor" data-dense={view.floor.length + (view.pending ? 1 : 0) >= 13 ? '1' : undefined}>
-                  {view.floor.map((id) => {
-                    const month = CARDS[id]?.month ?? 0
+                <div className="floor" data-dense={floorPiles.length >= 9 ? '1' : undefined}>
+                  {floorPiles.map((pile) => {
+                    const ppuk = pile.month > 0 && ppukMonths.has(pile.month)
                     return (
-                      <HwatuCard
-                        key={id}
-                        id={id}
-                        hot={focusMonth !== null && month === focusMonth}
-                        pick={choices.has(id)}
-                        label={ppukMonths.has(month) ? '뻑' : undefined}
-                        onClick={choices.has(id) && yourTurn ? () => onAction({ type: 'choose', cardId: id }) : undefined}
-                      />
+                      <div
+                        key={pile.key}
+                        className={`pile${ppuk ? ' ppuk-stack' : ''}${pile.ids.length > 1 ? ' paired' : ''}`}
+                        data-month={pile.month || undefined}
+                        data-n={pile.ids.length}
+                      >
+                        {pile.ids.map((id, i) => (
+                          <HwatuCard
+                            key={id}
+                            id={id}
+                            hot={(focusMonth !== null && pile.month === focusMonth) || id === view.pending?.playedId}
+                            pick={choices.has(id)}
+                            onClick={choices.has(id) && yourTurn ? () => onAction({ type: 'choose', cardId: id }) : undefined}
+                            label={ppuk && i === pile.ids.length - 1 ? '뻑' : undefined}
+                          />
+                        ))}
+                      </div>
                     )
                   })}
-                  {view.pending && <HwatuCard id={view.pending.playedId} hot />}
                   {view.floor.length === 0 && !view.pending && <p className="floor-empty">바닥이 비었습니다</p>}
                 </div>
               </div>
@@ -514,7 +618,7 @@ export function Table({
               )}
             </div>
 
-            <aside className="side">
+            <aside className={`side${view.decider === view.you ? ' live-seat' : ''}`}>
               <div className="emote-slot">
                 <button
                   type="button"
@@ -574,11 +678,6 @@ export function Table({
               })}
             </div>
           </div>
-          {ghost && (
-            <div className={`ghost from-${ghost.from}`}>
-              <HwatuCard id={ghost.id} />
-            </div>
-          )}
         </div>
       </div>
 

@@ -42,6 +42,7 @@ export function HwatuCard({
     <div
       className={`hwatu${def?.kind === 'bonus' ? ' bonus' : ''}${mini ? ' mini' : ''}${hot ? ' hot' : ''}${pick ? ' pick' : ''}${onClick ? ' live' : ''}`}
       style={{ ['--tilt' as string]: `${id && !mini ? tiltOf(id) : 0}deg` }}
+      data-card={id && !back ? id : undefined}
       onClick={onClick}
       onPointerDown={onFocusMonth}
       onPointerEnter={onFocusMonth}
