@@ -421,7 +421,7 @@ export function Table({
                   <HwatuCard back />
                   <span>{view.deckCount}</span>
                 </button>
-                <div className="floor">
+                <div className="floor" data-dense={view.floor.length + (view.pending ? 1 : 0) >= 13 ? '1' : undefined}>
                   {view.floor.map((id) => {
                     const month = CARDS[id]?.month ?? 0
                     return (

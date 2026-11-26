@@ -561,7 +561,10 @@ body.calm *, body.calm *::before, body.calm *::after {
     display: grid;
     grid-template-rows: 34px minmax(0, 1fr);
     gap: 6px;
-    padding: 6px 8px 8px;
+    padding-top: 6px;
+    padding-left: max(8px, env(safe-area-inset-left));
+    padding-right: max(8px, env(safe-area-inset-right));
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
   }
   .lobby .topbar {
     height: 34px;
@@ -649,7 +652,10 @@ body.calm *, body.calm *::before, body.calm *::after {
     grid-template-rows: 34px minmax(0, 1fr);
     grid-template-columns: minmax(0, 1fr);
     gap: 6px;
-    padding: 6px 8px 8px;
+    padding-top: 6px;
+    padding-left: max(8px, env(safe-area-inset-left));
+    padding-right: max(8px, env(safe-area-inset-right));
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
   }
   .stage > .topbar {
     grid-row: 1;
@@ -759,6 +765,13 @@ body.calm *, body.calm *::before, body.calm *::after {
     grid-auto-rows: 58px;
     gap: 4px;
     height: 100%;
+    align-content: center;
+    overflow: hidden;
+  }
+  .stage .floor[data-dense] {
+    grid-template-columns: repeat(8, minmax(0, 34px));
+    grid-auto-rows: 52px;
+    gap: 3px;
   }
   .stage .player.bottom {
     min-height: 0;
@@ -770,17 +783,27 @@ body.calm *, body.calm *::before, body.calm *::after {
     border-radius: 12px;
     padding: 4px;
   }
-  .stage .hand.you { height: 100%; min-height: 0; align-items: stretch; justify-items: stretch; }
-  .stage .hand.you .hwatu {
+  .stage .hand.you {
+    container-type: inline-size;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 4px;
+    height: 100%;
+    width: 100%;
     min-width: 0;
     min-height: 0;
-    width: 100%;
-    height: 100%;
-    max-width: 100%;
+  }
+  .stage .hand.you .hwatu {
+    flex: 0 0 auto;
+    width: auto;
+    height: min(100%, calc((100cqi - 36px) / 10 * 96 / 62));
+    aspect-ratio: 62 / 96;
+    max-width: calc((100% - 36px) / 10);
     max-height: 100%;
-    aspect-ratio: auto;
-    align-self: stretch;
-    justify-self: stretch;
+    min-width: 0;
+    margin: 0;
+    transform: none;
   }
   .stage .emote-slot { align-self: stretch; }
   .stage .emote-toggle { width: 100%; height: 26px; border-radius: 8px; }
@@ -805,6 +828,7 @@ body.calm *, body.calm *::before, body.calm *::after {
   .stage .board { grid-template-columns: 112px minmax(0, 1fr) 112px; }
   .soundbar input { display: none; }
   .stage .floor { grid-auto-rows: 58px; grid-template-columns: repeat(6, minmax(0, 46px)); }
+  .stage .floor[data-dense] { grid-template-columns: repeat(8, minmax(0, 32px)); grid-auto-rows: 48px; }
   .stage .who .portrait, .lobby-profile .portrait { width: 30px; }
   .cast .portrait { width: 26px; }
   .lobby-profile button, .lobby-card input, .bets button, .rulesel button,
