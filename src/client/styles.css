@@ -641,6 +641,26 @@ body.calm *, body.calm *::before, body.calm *::after {
   .bet-block { display: flex; align-items: center; gap: 6px; min-width: 0; }
   .bet-label { flex: none; font-size: 12px; }
   .bets { flex: 1; min-width: 0; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .bill .bets.slim {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 3px;
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .bill .bets.slim button {
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 3px 2px;
+    font-size: 9.5px;
+    letter-spacing: -0.04em;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .bill-body { overflow-x: hidden; }
   .rulesel { grid-template-columns: 1fr 1fr; }
   .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   .actions button:first-child { grid-column: 1 / -1; }

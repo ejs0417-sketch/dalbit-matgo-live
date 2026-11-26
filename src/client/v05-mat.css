@@ -259,3 +259,27 @@
 .stage.v05-mat .timer i { background: linear-gradient(90deg, rgba(255, 190, 90, .55), rgba(255, 240, 200, .25)) !important; border-radius: inherit; }
 .stage.v05-mat .emote-toggle { width: auto !important; align-self: flex-end; padding: 0 12px; background: rgba(12, 5, 3, .6) !important; }
 .stage.v05-mat .who strong.wx-score { font-size: 26px !important; }
+
+/* v0.5.2: 667×320 방장 정산창 점당 칩 5개 한 줄, 가로 스크롤·보유 금액 겹침 0px */
+@media (orientation: landscape) and (max-width: 720px), (orientation: landscape) and (max-height: 360px) {
+  .bill .bets.slim {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 3px;
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .bill .bets.slim button {
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 3px 1px;
+    font-size: 9.5px;
+    letter-spacing: -0.04em;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .bill-body { overflow-x: hidden; }
+}

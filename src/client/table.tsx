@@ -154,20 +154,25 @@ function Bill({
 }) {
   const [step, setStep] = useState(0)
   const stamped = useRef(-1)
+  const win = showdown.winner === you
   useEffect(() => {
     if (step <= stamped.current) return
     if (step >= 2 && step < 2 + showdown.factors.length) {
       audio.play('seal')
       audio.play('coin')
     }
-    if (step === showdown.factors.length + 2) audio.play('jackpot')
+    // 대박 팡파레는 본인이 정상 승리했을 때만. 기권·패배 화면에서는 절대 재생하지 않는다.
+    if (step === showdown.factors.length + 2 && win && !showdown.forfeit) audio.play('jackpot')
     stamped.current = step
-  }, [step, showdown.factors.length])
+  }, [step, showdown.factors.length, win, showdown.forfeit])
   useEffect(() => {
-    audio.play(showdown.nagari ? 'nagari' : showdown.winner === you ? 'win' : 'lose')
+    // 기권 정산은 이미 이벤트 루프에서 surrender() 징을 1회 울렸으므로 win/lose를 겹치지 않게 생략한다.
+    if (!showdown.forfeit) {
+      audio.play(showdown.nagari ? 'nagari' : win ? 'win' : 'lose')
+    }
     const timer = window.setInterval(() => setStep((s) => s + 1), 350)
     return () => window.clearInterval(timer)
-  }, [showdown, you])
+  }, [showdown, you, win])
   const goOn = step >= 1
   const shownBase = showdown.base + (goOn ? showdown.goBonus : 0)
   let mul = 1
@@ -177,10 +182,9 @@ function Bill({
   const points = shownBase * mul
   const moneyOn = step >= showdown.factors.length + 2
   const counted = useCount(showdown.paid, moneyOn && !showdown.nagari)
-  const win = showdown.winner === you
   return (
     <div className="bill">
-      {moneyOn && !showdown.nagari && (
+      {moneyOn && !showdown.nagari && win && !showdown.forfeit && (
         <div className="coins wx-coin-art" aria-hidden>
           {/* v0.5: 노란 CSS 원 대신 실제 그린 엽전 일러스트 분수 */}
           <img className="c0" src={WUXIA_SPRITES['coin-jackpot']} alt="" draggable={false} />
@@ -301,6 +305,32 @@ export function Table({
   const stageRef = useRef<HTMLDivElement | null>(null)
   const phys = useRef<CardPhysics | null>(null)
   const [bubble, setBubble] = useState<{ who: Seat; text: string; mood: Mood } | null>(null)
+  const bubbleTimer = useRef(0)
+  const prevPhaseRef = useRef(view.phase)
+  const hadShowdownRef = useRef(!!packet.showdown)
+  const prevGamesRef = useRef(room.games)
+
+  const clearBubbles = () => {
+    if (bubbleTimer.current) {
+      window.clearTimeout(bubbleTimer.current)
+      bubbleTimer.current = 0
+    }
+    setBubble(null)
+  }
+
+  // 새 판(한 판 더) 시작 시 이전 판 기권/대사 말풍선이 바닥에 남지 않게 즉시 초기화
+  useEffect(() => {
+    const leftOver = prevPhaseRef.current === 'ended' && (view.phase === 'chongtong' || view.phase === 'turn' || view.phase === 'choose' || view.phase === 'goStop')
+    const newGame = prevGamesRef.current !== room.games
+    prevPhaseRef.current = view.phase
+    prevGamesRef.current = room.games
+    if (leftOver || newGame) clearBubbles()
+  }, [view.phase, room.games])
+
+  useEffect(() => {
+    if (hadShowdownRef.current && !packet.showdown) clearBubbles()
+    hadShowdownRef.current = !!packet.showdown
+  }, [packet.showdown])
   const [, setHit] = useState<'kung' | 'jjak' | null>(null)
   const [tick, setTick] = useState(Date.now())
   const [focusMonth, setFocusMonth] = useState<number | null>(null)
@@ -356,6 +386,13 @@ export function Table({
     if (seen.current.has(packet.id)) return
     seen.current.add(packet.id)
     let cancel = false
+    if (packet.events.some((ev) => ev.type === 'deal')) {
+      if (bubbleTimer.current) {
+        window.clearTimeout(bubbleTimer.current)
+        bubbleTimer.current = 0
+      }
+      setBubble(null)
+    }
     void (async () => {
       setReady(false)
       let playedId = ''
@@ -375,10 +412,10 @@ export function Table({
       for (const ev of packet.events) {
         if (cancel) return
         const gev = ev as unknown as GenericGameEvent
-        const wx = resolveWuxia(gev, batch)
+        const wx = resolveWuxia(gev, batch, { you: view.you })
         // 첫뻑·연뻑·삼연뻑과 같은 배치의 일반 ppuk은 컷인·사운드·배너 모두 스킵 (중복 발동 방지)
         if (wx.suppressed) continue
-        const wxMs = fx.current ? playWuxiaForEvent(fx.current, gev, batch) : 0
+        const wxMs = fx.current ? playWuxiaForEvent(fx.current, gev, batch, { you: view.you }) : 0
         // 무협 붓글씨 컷인이 뜨는 이벤트는 기존 Impact 배너를 띄우지 않는다 (이중 컷인 방지)
         // v0.5: 피 뺏기는 실제 카드 비행으로 보여주므로 텍스트 배너 생략
         const banner = wx.cutin || (phys.current && (ev.type === 'steal' || ev.type === 'debtPay')) ? null : bannerFor(ev)
@@ -397,6 +434,13 @@ export function Table({
           setImpact(banner)
           setNonce((n) => n + 1)
           setShake(true)
+        }
+        if (ev.type === 'deal') {
+          if (bubbleTimer.current) {
+            window.clearTimeout(bubbleTimer.current)
+            bubbleTimer.current = 0
+          }
+          setBubble(null)
         }
         const speaker = room.seats.find((seat) => 'player' in ev && seat.seat === (ev as { player?: number }).player)
         const said = speech(ev, speaker?.avatarId ?? 'bokman')

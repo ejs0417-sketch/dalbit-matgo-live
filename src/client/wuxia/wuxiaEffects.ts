@@ -47,6 +47,17 @@ export const WUXIA_SPRITES: Record<WuxiaSprite, string> = {
 
 export const WUXIA_PRELOAD_URLS = ['/art/table-mat.webp', '/art/vfx/mat-bg.webp', ...Object.values(WUXIA_SPRITES)];
 
+/**
+ * 대박 정산 컷인(강호 대승 / 대박 정산!)과 황금 엽전 폭발은
+ * 본인이 정상 승리했을 때만 허용한다. 기권승·기권패·패배 화면에서는 절대 재생하지 않는다.
+ */
+export function allowJackpotCutin(opts: { forfeit?: boolean; winner?: unknown; you?: unknown }): boolean {
+  if (opts.forfeit) return false;
+  if (opts.winner !== undefined && opts.you !== undefined && opts.winner !== opts.you) return false;
+  return true;
+}
+
+
 const preloaded: HTMLImageElement[] = [];
 /** 로비/대국 진입 시 호출 — 컷인 발동 순간 디코딩 지연·깜빡임 0 */
 export function preloadWuxiaArt() {

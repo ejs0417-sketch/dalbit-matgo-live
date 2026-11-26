@@ -1,5 +1,5 @@
 import type { WuxiaEffectsEngine, WuxiaEventKind } from './wuxiaEffects';
-import { WUXIA_EFFECT_CATALOG } from './wuxiaEffects';
+import { WUXIA_EFFECT_CATALOG, allowJackpotCutin } from './wuxiaEffects';
 
 export interface GenericGameEvent {
   type: string;
@@ -29,8 +29,13 @@ export function hasSpecialPpuk(batch?: GenericGameEvent[]): boolean {
   return !!batch?.some((e) => SPECIAL_PPUK_TYPES.has(e.type));
 }
 
+export interface WuxiaPlayContext {
+  /** 현재 화면을 보고 있는 좌석. 대박 컷인은 이 좌석이 정상 승리자일 때만 재생 */
+  you?: number;
+}
+
 /** 서버 GameEvent 1건을 무협 초식 kind로 해석 (부작용 없음) */
-export function resolveWuxia(ev: GenericGameEvent, sameBatchEvents?: GenericGameEvent[]): WuxiaResolved {
+export function resolveWuxia(ev: GenericGameEvent, sameBatchEvents?: GenericGameEvent[], ctx?: WuxiaPlayContext): WuxiaResolved {
   let kind: WuxiaEventKind | null = null;
   let overrides: { title?: string; badge?: string; sub?: string } | undefined;
   let sfx: string | null = null;
@@ -91,7 +96,13 @@ export function resolveWuxia(ev: GenericGameEvent, sameBatchEvents?: GenericGame
       if (bk in WUXIA_EFFECT_CATALOG) kind = bk;
       break;
     }
-    case 'win': kind = 'jackpot'; break;
+    case 'win':
+      // 기권 정산(승/패 모두)이거나 본인이 승자가 아니면 대박 컷인·엽전 폭발을 생략한다.
+      if (!allowJackpotCutin({ forfeit: ev.kind === 'forfeit', winner: ev.player, you: ctx?.you })) {
+        return { suppressed: true, kind: null, cutin: false, sfx: null };
+      }
+      kind = 'jackpot';
+      break;
     default: break;
   }
 
@@ -108,8 +119,9 @@ export function playWuxiaForEvent(
   engine: WuxiaEffectsEngine,
   ev: GenericGameEvent,
   sameBatchEvents?: GenericGameEvent[],
+  ctx?: WuxiaPlayContext,
 ): number {
-  const r = resolveWuxia(ev, sameBatchEvents);
+  const r = resolveWuxia(ev, sameBatchEvents, ctx);
   if (ev.type === 'go') engine.setGoLevel(Number(ev.count ?? 1));
   if (!r.kind) return 0;
   engine.trigger(r.kind, r.overrides);
