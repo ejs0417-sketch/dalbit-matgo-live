@@ -328,6 +328,7 @@ export function Table({
   const [qaChoose, setQaChoose] = useState<{ playedId: string; options: string[] } | null>(null)
   const chooseOpenRef = useRef(false)
   const [confirmForfeit, setConfirmForfeit] = useState(false)
+  const [specialPick, setSpecialPick] = useState<{ cardId: string; month: number } | null>(null)
 
   // v0.5: 실물 화투 물리 모션 엔진 (DOM 좌표 기반 오버레이 비행, pointer-events: none)
   useEffect(() => {
@@ -407,7 +408,8 @@ export function Table({
         const sound = soundFor(ev)
         const skipKung = ev.type === 'drop' && ev.cardId === playedId
         const physical = physics && (ev.type === 'play' || ev.type === 'flip' || ev.type === 'capture' || ev.type === 'steal' || ev.type === 'debtPay' || ev.type === 'bomb' || ev.type === 'bonusPlay' || ev.type === 'drop')
-        if (sound && !skipKung && !physical) audio.play(sound)
+        // 물리 연출이 있는 이벤트는 합성 타격음을 건너뛰되, 폭탄/보너스는 성우 보이스('폭탄!' 등)를 반드시 재생
+        if (sound && !skipKung && (!physical || ev.type === 'bomb' || ev.type === 'bonusPlay')) audio.play(sound)
         if (ev.type === 'play') {
           playedId = ev.cardId
           setHit('kung')
@@ -425,6 +427,7 @@ export function Table({
             bubbleTimer.current = 0
           }
           setBubble(null)
+          setSpecialPick(null)
         }
         const speaker = room.seats.find((seat) => 'player' in ev && seat.seat === (ev as { player?: number }).player)
         const said = speech(ev, speaker?.avatarId ?? 'bokman')
@@ -862,7 +865,14 @@ export function Table({
                     extra={match?.cls}
                     badge={match?.badge}
                     badgeTitle={match?.title}
-                    onClick={yourTurn && playable.has(id) ? () => { setFocusMonth(null); onAction({ type: 'play', cardId: id }) } : undefined}
+                    onClick={yourTurn && playable.has(id) ? () => {
+                      setFocusMonth(null)
+                      const month = CARDS[id]?.month ?? 0
+                      const canBomb = bombs.some((a) => a.type === 'bomb' && a.month === month)
+                      const canShake = shakes.some((a) => a.type === 'shake' && a.month === month)
+                      if (canBomb || canShake) setSpecialPick({ cardId: id, month })
+                      else onAction({ type: 'play', cardId: id })
+                    } : undefined}
                     onFocusMonth={month ? () => setFocusMonth(month) : undefined}
                     onBlurMonth={() => setFocusMonth(null)}
                   />
@@ -874,6 +884,26 @@ export function Table({
       </div>
 
       <Impact spec={impact} nonce={nonce} />
+
+      {specialPick && yourTurn && view.phase === 'turn' && (
+        <div className="modal" role="dialog" aria-modal="true" aria-label="폭탄 또는 흔들기">
+          <div className="sheet">
+            <p className="eyebrow">{monthLabel(specialPick.month)} 같은 달 세 장</p>
+            <h2>어떻게 내시겠습니까?</h2>
+            <p>폭탄은 세 장을 한꺼번에 내고 ×2에 피 한 장을 받습니다. 흔들기는 한 장만 내고 ×2입니다.</p>
+            <div className="actions">
+              {bombs.some((a) => a.type === 'bomb' && a.month === specialPick.month) && (
+                <Button size="lg" variant="crimson" onClick={() => { const m = specialPick.month; setSpecialPick(null); onAction({ type: 'bomb', month: m }) }}>폭탄!</Button>
+              )}
+              {shakes.some((a) => a.type === 'shake' && a.month === specialPick.month) && (
+                <Button size="lg" variant="ink" onClick={() => { const m = specialPick.month; setSpecialPick(null); onAction({ type: 'shake', month: m }) }}>흔들기!</Button>
+              )}
+              <Button size="lg" onClick={() => { const id = specialPick.cardId; setSpecialPick(null); onAction({ type: 'play', cardId: id }) }}>그냥 치기</Button>
+              <Button size="lg" variant="ghost" onClick={() => setSpecialPick(null)}>취소</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {yourTurn && view.phase === 'chongtong' && quad && (
         <div className="modal">

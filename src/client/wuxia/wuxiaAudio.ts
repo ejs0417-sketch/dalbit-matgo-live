@@ -6,6 +6,46 @@
  * - 폰 스피커에서도 묵직하게 들리는 중저음(110~180Hz) 보강 타격 + 검기·대북·빙결·비조·엽전 잭팟
  */
 
+const WUXIA_VOICE_MAP: Record<string, string> = {
+  jjok: '/art/sfx/voice-jjok.mp3',
+  ttadak: '/art/sfx/voice-ttadak.mp3',
+  ppuk: '/art/sfx/voice-ppuk.mp3',
+  firstPpuk: '/art/sfx/voice-firstPpuk.mp3',
+  doublePpuk: '/art/sfx/voice-doublePpuk.mp3',
+  triple: '/art/sfx/voice-triple.mp3',
+  sweep: '/art/sfx/voice-sweep.mp3',
+  bomb: '/art/sfx/voice-bomb.mp3',
+  shake: '/art/sfx/voice-shake.mp3',
+  'yaku:godori': '/art/sfx/voice-godori.mp3',
+  'yaku:hong': '/art/sfx/voice-hong.mp3',
+  'yaku:cheong': '/art/sfx/voice-cheong.mp3',
+  'yaku:cho': '/art/sfx/voice-cho.mp3',
+  'yaku:sam': '/art/sfx/voice-sam.mp3',
+  'yaku:bisam': '/art/sfx/voice-bisam.mp3',
+  'yaku:sa': '/art/sfx/voice-sa.mp3',
+  'yaku:o': '/art/sfx/voice-o.mp3',
+  go1: '/art/sfx/voice-go1.mp3',
+  go2: '/art/sfx/voice-go2.mp3',
+  go3: '/art/sfx/voice-go3.mp3',
+  go4: '/art/sfx/voice-go4.mp3',
+  go5: '/art/sfx/voice-go5.mp3',
+  stop: '/art/sfx/voice-stop.mp3',
+  chongtong: '/art/sfx/voice-chongtong.mp3',
+  'bak:pi': '/art/sfx/voice-pibak.mp3',
+  'bak:gwang': '/art/sfx/voice-gwangbak.mp3',
+  'bak:go': '/art/sfx/voice-gobak.mp3',
+  'bak:gobak': '/art/sfx/voice-gobak.mp3',
+  'bak:mung': '/art/sfx/voice-mungdda.mp3',
+  'bak:meong': '/art/sfx/voice-mungdda.mp3',
+  ownPpuk: '/art/sfx/voice-ownPpuk.mp3',
+  eatPpuk: '/art/sfx/voice-eatPpuk.mp3',
+  four: '/art/sfx/voice-four.mp3',
+  nagari: '/art/sfx/voice-nagari.mp3',
+  mission: '/art/sfx/voice-mission.mp3',
+  bonusPlay: '/art/sfx/voice-bonusPlay.mp3',
+  bonusDraw: '/art/sfx/voice-bonusPlay.mp3',
+};
+
 export type BgmScene = 'lobby' | 'table' | 'go' | 'goHigh' | 'goMax';
 
 export type WuxiaSfxKind =
@@ -43,6 +83,8 @@ export class WuxiaAudioEngine {
   private bgmGain: GainNode | null = null;
   private sfxGain: GainNode | null = null;
   private noise: AudioBuffer | null = null;
+  private sampleBuffers = new Map<string, AudioBuffer>();
+  private sampleLoading = new Set<string>();
   private timer: number | null = null;
   private nextBeat = 0;
   private step = 0;
@@ -76,6 +118,7 @@ export class WuxiaAudioEngine {
       void this.ctx.resume();
     }
     this.applyVolumes();
+    for (const [k, url] of Object.entries(WUXIA_VOICE_MAP)) this.preloadSample(k, url);
     this.ensureLoop();
     if (!this.watched) {
       this.watched = true;
@@ -191,6 +234,9 @@ export class WuxiaAudioEngine {
     if (this.ctx.state === 'suspended') void this.ctx.resume();
     const t = this.ctx.currentTime;
 
+    if (kind !== 'jjok' && WUXIA_VOICE_MAP[kind]) {
+      this.playSample(kind, WUXIA_VOICE_MAP[kind], t, 1.35);
+    }
     switch (kind) {
       case 'kung': this.chakSnap(t, 0.96); break;
       case 'jjak': this.chakChak(t); break;
@@ -541,7 +587,47 @@ export class WuxiaAudioEngine {
   }
 
   /** 쪽 전용 "쪼~옥!" 입맞춤 효과음 (흡입 스윕 + 팝 스맥 + 경쾌한 포인트) */
+  private preloadSample(key: string, url: string): void {
+    if (!this.ctx || this.sampleBuffers.has(key) || this.sampleLoading.has(key)) return;
+    if (typeof fetch === 'undefined') return;
+    this.sampleLoading.add(key);
+    fetch(url)
+      .then((r) => (r.ok ? r.arrayBuffer() : null))
+      .then((ab) => (ab && this.ctx ? this.ctx.decodeAudioData(ab) : null))
+      .then((buf) => { if (buf) this.sampleBuffers.set(key, buf); })
+      .catch(() => {})
+      .finally(() => { this.sampleLoading.delete(key); });
+  }
+
+  private playSample(key: string, url: string, t: number, gainVal = 1.3): boolean {
+    if (!this.ctx || !this.sfxGain) return false;
+    const buf = this.sampleBuffers.get(key);
+    if (buf) {
+      const src = this.ctx.createBufferSource();
+      src.buffer = buf;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(gainVal, t);
+      src.connect(g);
+      g.connect(this.sfxGain);
+      src.start(t);
+      return true;
+    }
+    this.preloadSample(key, url);
+    if (typeof Audio !== 'undefined') {
+      try {
+        const el = new Audio(url);
+        el.volume = 1.0;
+        void el.play().catch(() => {});
+        return true;
+      } catch {
+        // fall through to synth
+      }
+    }
+    return false;
+  }
+
   private jjokKiss(t: number): void {
+    if (this.playSample('jjok', WUXIA_VOICE_MAP.jjok, t, 1.35)) return;
     if (!this.ctx || !this.sfxGain || !this.noise) return;
     // 1) "쪼~" 흡입 (고공명 밴드패스 노이즈 + 포먼트 상승)
     const src = this.ctx.createBufferSource();

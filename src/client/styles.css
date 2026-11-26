@@ -665,6 +665,8 @@ body.calm *, body.calm *::before, body.calm *::after {
   .rulesel { grid-template-columns: 1fr 1fr; }
   .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   .actions button:first-child { grid-column: 1 / -1; }
+  /* v0.5.3: 로비 전용 first-child 규칙이 모달 2버튼(고/스톱·총통·기권·폭탄)에 새지 않게 */
+  .modal .sheet .actions button:first-child { grid-column: auto; }
   .lobby-right .actions button,
   .lobby-right .join button,
   .bets button,
