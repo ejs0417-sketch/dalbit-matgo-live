@@ -188,8 +188,11 @@ export function App() {
       }
       socket.send(JSON.stringify({ type: 'ping', t: Date.now() }))
     }, 25_000)
+    // 첫 터치/클릭/키 입력에서 AudioContext.resume() 언락 (iOS Safari 무음 방지)
     const unlock = () => audio.unlock()
     window.addEventListener('pointerdown', unlock)
+    window.addEventListener('touchend', unlock, { passive: true })
+    window.addEventListener('keydown', unlock)
     const orient = window.matchMedia('(orientation: portrait) and (max-width: 900px)')
     const syncOrient = () => setPortrait(orient.matches)
     syncOrient()
@@ -200,6 +203,8 @@ export function App() {
       window.clearInterval(beat)
       window.clearTimeout(retry)
       window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('touchend', unlock)
+      window.removeEventListener('keydown', unlock)
       orient.removeEventListener('change', syncOrient)
       wsRef.current?.close()
     }
@@ -207,7 +212,8 @@ export function App() {
 
   useEffect(() => {
     const level = packet ? Math.max(packet.view.yourGo, packet.view.oppGo) : 0
-    audio.setScene(!room || room.status === 'lobby' ? 'lobby' : level >= 5 ? 'goMax' : level >= 4 ? 'goHigh' : level >= 3 ? 'go' : 'table')
+    if (!room || room.status === 'lobby' || !packet) audio.setScene('lobby')
+    else audio.setGoLevel(level)
   }, [room, packet])
 
   function updateNick(nickname: string) {

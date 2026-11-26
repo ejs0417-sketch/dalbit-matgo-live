@@ -1,0 +1,326 @@
+/* 달빛맞고 : 강호무림 — 무공 초식 × 슬롯 잭팟 이펙트 스타일 (v0.4) */
+/* 모든 연출 레이어는 pointer-events: none 고정 (입력·타이머 방해 금지) */
+
+:root {
+  --wx-ink: #120c0e;
+  --wx-gold: #f5c95b;
+  --wx-gold-hot: #fff0a8;
+  --wx-crimson: #d92b3a;
+  --wx-crimson-deep: #7a0d19;
+  --wx-jade: #26c281;
+  --wx-ice: #5cd6ff;
+  --wx-violet: #b666ff;
+}
+
+.wx-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.wx-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 61;
+  pointer-events: none;
+}
+
+/* 회전 황금 선버스트 (슬롯 잭팟 광선) */
+.wx-sunburst {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 160vmax;
+  height: 160vmax;
+  transform: translate(-50%, -50%);
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(245, 201, 91, 0.24) 0deg 8deg,
+    transparent 8deg 20deg
+  );
+  animation: wx-spin 7s linear infinite, wx-fade-pop 1.5s ease-out forwards;
+  pointer-events: none;
+  z-index: 59;
+  mix-blend-mode: screen;
+}
+
+.wx-sunburst.ice {
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(92, 214, 255, 0.24) 0deg 8deg,
+    transparent 8deg 20deg
+  );
+}
+
+.wx-sunburst.crimson {
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(217, 43, 58, 0.28) 0deg 8deg,
+    transparent 8deg 20deg
+  );
+}
+
+/* 전체 화면 플래시 */
+.wx-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 62;
+  pointer-events: none;
+  animation: wx-flash-burst 0.42s ease-out forwards;
+}
+.wx-flash.gold { background: radial-gradient(circle, rgba(255,244,190,0.75), rgba(245,201,91,0.12) 65%, transparent); }
+.wx-flash.crimson { background: radial-gradient(circle, rgba(255,110,120,0.72), rgba(217,43,58,0.16) 65%, transparent); }
+.wx-flash.ice { background: radial-gradient(circle, rgba(190,244,255,0.75), rgba(92,214,255,0.14) 65%, transparent); }
+.wx-flash.jade { background: radial-gradient(circle, rgba(160,255,212,0.7), rgba(38,194,129,0.14) 65%, transparent); }
+.wx-flash.violet { background: radial-gradient(circle, rgba(220,170,255,0.72), rgba(140,50,230,0.18) 65%, transparent); }
+
+/* 초식 컷인 배너 */
+.wx-cutin {
+  position: relative;
+  z-index: 65;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 36px;
+  pointer-events: none;
+  animation: wx-cutin-in 0.28s cubic-bezier(0.18, 1.32, 0.36, 1) both;
+}
+
+.wx-cutin::before {
+  content: "";
+  position: absolute;
+  inset: -6px -48px;
+  background: linear-gradient(90deg, transparent, rgba(18, 10, 12, 0.88) 18%, rgba(18, 10, 12, 0.92) 82%, transparent);
+  border-top: 2px solid var(--wx-accent, var(--wx-gold));
+  border-bottom: 2px solid var(--wx-accent, var(--wx-gold));
+  box-shadow: 0 0 28px rgba(0, 0, 0, 0.75), 0 0 18px color-mix(in srgb, var(--wx-accent, var(--wx-gold)) 55%, transparent);
+  transform: skewX(-12deg);
+  z-index: -1;
+}
+
+.wx-cutin-sub {
+  font-family: "Song Myung", serif;
+  font-size: clamp(12px, 2.2vh, 16px);
+  letter-spacing: 0.28em;
+  color: var(--wx-gold-hot);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.wx-cutin-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: "Black Han Sans", "Song Myung", sans-serif;
+  font-size: clamp(28px, 6.2vh, 54px);
+  line-height: 1.05;
+  letter-spacing: 0.06em;
+  background: linear-gradient(180deg, #fffbe2 0%, var(--wx-accent, #f5c95b) 55%, #b56c12 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 4px 0 rgba(18, 8, 10, 0.95)) drop-shadow(0 0 18px color-mix(in srgb, var(--wx-accent, #f5c95b) 65%, transparent));
+}
+
+/* 고·도·리 3박자 붓글씨 */
+.wx-beat-chars {
+  display: flex;
+  gap: 12px;
+}
+.wx-beat-char {
+  display: inline-block;
+  opacity: 0;
+  transform: scale(2.4) rotate(-10deg);
+  animation: wx-stamp-beat 0.32s cubic-bezier(0.2, 1.4, 0.35, 1) forwards;
+}
+.wx-beat-char:nth-child(1) { animation-delay: 0ms; }
+.wx-beat-char:nth-child(2) { animation-delay: 220ms; }
+.wx-beat-char:nth-child(3) { animation-delay: 440ms; }
+
+/* 주홍 낙관 도장 */
+.wx-seal {
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 2px 6px;
+  border: 2.5px solid #ff5d6b;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #d92b3a, #8d0e1a);
+  color: #fff6e0;
+  font-family: "Song Myung", serif;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 3px 0 #4a060d, 0 0 14px rgba(217, 43, 58, 0.75);
+  transform: rotate(-8deg);
+  animation: wx-seal-slam 0.28s cubic-bezier(0.2, 1.5, 0.4, 1) 0.12s both;
+}
+
+.wx-cutin-badge {
+  margin-top: 2px;
+  padding: 3px 14px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7a0d19, #d92b3a, #7a0d19);
+  border: 1px solid #ffd875;
+  color: #fff8dc;
+  font-size: clamp(12px, 2vh, 15px);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  box-shadow: 0 0 16px rgba(245, 201, 91, 0.55);
+}
+
+/* 팔괘 진법 (폭탄 / 삼연뻑) */
+.wx-bagua {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: min(56vmin, 260px);
+  height: min(56vmin, 260px);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 3px solid rgba(245, 201, 91, 0.9);
+  box-shadow:
+    inset 0 0 34px rgba(217, 43, 58, 0.85),
+    0 0 42px rgba(245, 201, 91, 0.85);
+  background:
+    radial-gradient(circle, rgba(255, 214, 112, 0.28) 0%, rgba(217, 43, 58, 0.22) 48%, transparent 72%),
+    repeating-conic-gradient(from 0deg, rgba(255, 224, 138, 0.45) 0deg 3deg, transparent 3deg 45deg);
+  animation: wx-bagua-expand 0.95s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: none;
+  z-index: 60;
+}
+
+/* 고(Go) 단계별 테두리 내공 체이스 오라 */
+.wx-go-aura {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.wx-go-aura.level-1 {
+  opacity: 0.45;
+  box-shadow: inset 0 0 26px rgba(245, 201, 91, 0.45);
+}
+.wx-go-aura.level-2 {
+  opacity: 0.7;
+  box-shadow: inset 0 0 38px rgba(255, 145, 42, 0.65);
+  animation: wx-aura-pulse 1.6s ease-in-out infinite;
+}
+.wx-go-aura.level-3 {
+  opacity: 0.9;
+  box-shadow: inset 0 0 54px rgba(217, 43, 58, 0.82), inset 0 0 18px rgba(245, 201, 91, 0.65);
+  animation: wx-aura-pulse 1.05s ease-in-out infinite;
+}
+.wx-go-aura.level-4,
+.wx-go-aura.level-5 {
+  opacity: 1;
+  box-shadow: inset 0 0 72px rgba(235, 32, 58, 0.95), inset 0 0 26px rgba(255, 232, 128, 0.9);
+  animation: wx-aura-pulse 0.65s ease-in-out infinite;
+}
+
+/* 정산 박(피박·광박·멍따·고박) 슬롯 배수 연쇄 도장 */
+.wx-bak-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  pointer-events: none;
+}
+.wx-bak-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 2px solid #ffd978;
+  background: linear-gradient(180deg, #c61e2e, #6e0914);
+  color: #fff8df;
+  font-family: "Black Han Sans", sans-serif;
+  font-size: 16px;
+  box-shadow: 0 4px 0 #3f040a, 0 0 18px rgba(217, 43, 58, 0.75);
+  animation: wx-seal-slam 0.34s cubic-bezier(0.2, 1.55, 0.35, 1) both;
+}
+.wx-bak-stamp.gwang {
+  background: linear-gradient(180deg, #e5a31d, #8d5204);
+  box-shadow: 0 4px 0 #4c2900, 0 0 20px rgba(245, 201, 91, 0.85);
+}
+.wx-bak-stamp.gobak {
+  background: linear-gradient(180deg, #8b2be2, #3e0a6e);
+  box-shadow: 0 4px 0 #20033d, 0 0 20px rgba(182, 102, 255, 0.85);
+}
+
+/* 화면 진동 */
+.wx-shake-sm { animation: wx-rumble-sm 0.24s ease-out; }
+.wx-shake-md { animation: wx-rumble-md 0.36s ease-out; }
+.wx-shake-lg { animation: wx-rumble-lg 0.52s ease-out; }
+
+@keyframes wx-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+@keyframes wx-fade-pop {
+  0% { opacity: 0; }
+  15% { opacity: 0.9; }
+  78% { opacity: 0.72; }
+  100% { opacity: 0; }
+}
+@keyframes wx-flash-burst {
+  0% { opacity: 0.95; }
+  100% { opacity: 0; }
+}
+@keyframes wx-cutin-in {
+  0% { opacity: 0; transform: scale(1.42) translateY(8px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes wx-stamp-beat {
+  0% { opacity: 0; transform: scale(2.5) rotate(-12deg); }
+  75% { opacity: 1; transform: scale(0.92) rotate(2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+@keyframes wx-seal-slam {
+  0% { opacity: 0; transform: scale(2.3) rotate(-18deg); }
+  75% { opacity: 1; transform: scale(0.92) rotate(-6deg); }
+  100% { opacity: 1; transform: scale(1) rotate(-8deg); }
+}
+@keyframes wx-bagua-expand {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.25) rotate(0deg); }
+  35% { opacity: 1; transform: translate(-50%, -50%) scale(1.08) rotate(120deg); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.45) rotate(240deg); }
+}
+@keyframes wx-aura-pulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.32); }
+}
+@keyframes wx-rumble-sm {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-3px, 2px); }
+  55% { transform: translate(3px, -2px); }
+  80% { transform: translate(-2px, 1px); }
+}
+@keyframes wx-rumble-md {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-6px, 4px); }
+  40% { transform: translate(6px, -4px); }
+  60% { transform: translate(-4px, -3px); }
+  80% { transform: translate(4px, 3px); }
+}
+@keyframes wx-rumble-lg {
+  0%, 100% { transform: translate(0, 0); }
+  15% { transform: translate(-9px, 6px); }
+  30% { transform: translate(9px, -6px); }
+  45% { transform: translate(-7px, -5px); }
+  60% { transform: translate(7px, 5px); }
+  75% { transform: translate(-4px, 3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wx-sunburst, .wx-bagua, .wx-go-aura, .wx-shake-sm, .wx-shake-md, .wx-shake-lg {
+    animation: none !important;
+  }
+}

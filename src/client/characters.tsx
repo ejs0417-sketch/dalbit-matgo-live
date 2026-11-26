@@ -67,6 +67,17 @@ function Prop({ id }: { id: string }) {
 
 export function Portrait({ id, mood = 'idle', className = '' }: { id: string; mood?: Mood; className?: string }) {
   const person = avatarById(id)
+  if (person.portrait) {
+    return (
+      <img
+        src={person.portrait}
+        alt={`${person.name} · ${person.title}`}
+        draggable={false}
+        className={`portrait wx-portrait mood-${mood} ${className}`}
+        style={{ ['--wx-accent' as string]: person.accent }}
+      />
+    )
+  }
   const hairFront =
     person.prop === 'perm'
       ? 'M22 62 Q18 28 40 24 Q60 6 82 24 Q104 30 98 64 Q90 40 60 38 Q32 42 22 62Z'

@@ -9,6 +9,9 @@ import { SoundIcons } from './lobby'
 import { Portrait } from './characters'
 import type { EmoteMsg, RoomInfo, Showdown, TablePacket } from './model'
 import { Button } from './ui'
+import { WuxiaEffectsEngine } from './wuxia/wuxiaEffects'
+import { playWuxiaForEvent, resolveWuxia, type GenericGameEvent } from './wuxia/eventAdapter'
+import './wuxia/wuxiaEffects.css'
 
 function wait(ms: number) {
   const reduce = document.body.classList.contains('calm') || window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -58,6 +61,8 @@ function speech(ev: GameEvent, avatarId = 'bokman'): { who: Seat; text: string; 
     case 'bak': return { who: ev.player, text: ev.kind === 'pi' ? '피박!' : ev.kind === 'gwang' ? '광박!' : ev.kind === 'meong' ? '멍따!' : '고박!', mood: 'cheer' }
     case 'steal': return { who: ev.from, text: ev.cardIds.length ? '내 피…!' : '피가 없어서 빚이다.', mood: ev.cardIds.length ? 'angry' : 'sad' }
     case 'chongtong': return { who: ev.player, text: '총통!', mood: 'cheer' }
+    case 'firstPpuk': return { who: ev.player, text: lineOf(avatarId, 'firstPpuk', '첫뻑! +7점!'), mood: 'cheer' }
+    case 'doublePpuk': return { who: ev.player, text: lineOf(avatarId, 'doublePpuk', '연뻑! +14점!'), mood: 'cheer' }
     case 'triple': return { who: ev.player, text: '세 번이야. 내 판이다!', mood: 'cheer' }
     case 'nagari': return null
     default: return null
@@ -245,6 +250,22 @@ export function Table({
   const [focusMonth, setFocusMonth] = useState<number | null>(null)
   const [emoteOpen, setEmoteOpen] = useState(false)
   const warned = useRef(-1)
+  const fx = useRef<WuxiaEffectsEngine | null>(null)
+
+  // v0.4.2: 무협 초식 이펙트 엔진 (모든 레이어 pointer-events: none)
+  useEffect(() => {
+    const engine = new WuxiaEffectsEngine(document.body)
+    fx.current = engine
+    return () => {
+      engine.destroy()
+      if (fx.current === engine) fx.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    const level = Math.max(view.yourGo, view.oppGo)
+    fx.current?.setGoLevel(level)
+  }, [view.yourGo, view.oppGo])
 
   useEffect(() => {
     if (seen.current.has(packet.id)) return
@@ -253,9 +274,16 @@ export function Table({
     void (async () => {
       setReady(false)
       let playedId = ''
+      const batch = packet.events as unknown as GenericGameEvent[]
       for (const ev of packet.events) {
         if (cancel) return
-        const banner = bannerFor(ev)
+        const gev = ev as unknown as GenericGameEvent
+        const wx = resolveWuxia(gev, batch)
+        // 첫뻑·연뻑·삼연뻑과 같은 배치의 일반 ppuk은 컷인·사운드·배너 모두 스킵 (중복 발동 방지)
+        if (wx.suppressed) continue
+        const wxMs = fx.current ? playWuxiaForEvent(fx.current, gev, batch) : 0
+        // 무협 붓글씨 컷인이 뜨는 이벤트는 기존 Impact 배너를 띄우지 않는다 (이중 컷인 방지)
+        const banner = wx.cutin ? null : bannerFor(ev)
         const sound = soundFor(ev)
         const skipKung = ev.type === 'drop' && ev.cardId === playedId
         if (sound && !skipKung) audio.play(sound)
@@ -264,10 +292,7 @@ export function Table({
           setHit('kung')
         } else if (ev.type === 'drop' && !skipKung) setHit('kung')
         else if (ev.type === 'capture' || ev.type === 'jjok' || ev.type === 'ttadak' || ev.type === 'four') setHit('jjak')
-        if (ev.type === 'go') {
-          const tier = goIntensity(ev.count)
-          audio.setScene(tier >= 5 ? 'goMax' : tier >= 4 ? 'goHigh' : tier >= 3 ? 'go' : 'table')
-        }
+        if (ev.type === 'go') audio.setGoLevel(goIntensity(ev.count))
         if (banner) {
           setImpact(banner)
           setNonce((n) => n + 1)
@@ -280,7 +305,8 @@ export function Table({
         if (ev.type === 'flip') setGhost({ id: ev.cardId, from: 'deck' })
         if (ev.type === 'capture' && ev.cardIds[0]) setGhost({ id: ev.cardIds[0], from: 'floor' })
         const tier = ev.type === 'go' ? goIntensity(ev.count) : 0
-        const long = ev.type === 'yaku' ? 1500 : tier >= 4 ? 1300 : tier === 3 ? 1100 : banner ? 920 : ev.type === 'deal' ? 620 : 280
+        const base = ev.type === 'yaku' ? 1500 : tier >= 4 ? 1300 : tier === 3 ? 1100 : banner ? 920 : ev.type === 'deal' ? 620 : 280
+        const long = wx.cutin ? Math.max(base, Math.min(wxMs, 1900)) : base
         await wait(long)
         if (cancel) return
         setGhost(null)

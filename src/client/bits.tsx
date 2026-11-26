@@ -40,7 +40,7 @@ export function HwatuCard({
   const alt = back ? '화투 뒷면' : def?.name ?? '폭탄패'
   return (
     <div
-      className={`hwatu${mini ? ' mini' : ''}${hot ? ' hot' : ''}${pick ? ' pick' : ''}${onClick ? ' live' : ''}`}
+      className={`hwatu${def?.kind === 'bonus' ? ' bonus' : ''}${mini ? ' mini' : ''}${hot ? ' hot' : ''}${pick ? ' pick' : ''}${onClick ? ' live' : ''}`}
       style={{ ['--tilt' as string]: `${id && !mini ? tiltOf(id) : 0}deg` }}
       onClick={onClick}
       onPointerDown={onFocusMonth}
@@ -163,7 +163,7 @@ export function bannerFor(ev: GameEvent): BannerSpec | null {
   }
 }
 
-export function soundFor(ev: GameEvent) {
+export function soundFor(ev: GameEvent): string | null {
   switch (ev.type) {
     case 'play':
     case 'drop':
@@ -175,40 +175,38 @@ export function soundFor(ev: GameEvent) {
       return 'flip'
     case 'deal':
       return 'shuffle'
+    case 'steal':
+      return 'steal'
+    case 'floorBonus':
+      return 'bonusPlay'
+    case 'win':
+      return 'jackpot'
+    case 'yaku':
+      return `yaku:${ev.id}`
+    case 'bak':
+      return `bak:${ev.kind}`
+    case 'go':
+      return `go${Math.max(1, Math.min(5, goIntensity(ev.count)))}`
+    case 'ppuk':
     case 'jjok':
     case 'ttadak':
     case 'four':
     case 'sweep':
-    case 'steal':
-      return 'slash'
-    case 'ppuk':
     case 'ownPpuk':
     case 'eatPpuk':
     case 'gukjin':
     case 'stop':
     case 'nagari':
-    case 'bak':
-      return 'seal'
     case 'firstPpuk':
     case 'doublePpuk':
     case 'triple':
     case 'chongtong':
     case 'mission':
-    case 'floorBonus':
     case 'bonusPlay':
     case 'bonusDraw':
-      return 'jackpot'
     case 'bomb':
     case 'shake':
-      return 'bagua'
-    case 'yaku':
-      if (ev.id === 'godori') return 'birds'
-      if (ev.id === 'hong') return 'flame'
-      if (ev.id === 'cheong') return 'frost'
-      if (ev.id === 'cho') return 'wind'
-      return 'jackpot'
-    case 'go':
-      return (goIntensity(ev.count) >= 3 ? 'jackpot' : `go${goIntensity(ev.count)}`)
+      return ev.type
     default:
       return null
   }
