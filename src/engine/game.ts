@@ -579,8 +579,25 @@ function doBomb(state: GameState, seat: Seat, month: number, events: GameEvent[]
   finishTurn(state, seat, events)
 }
 
+/** v0.5.1 중간 기권: 진행 중인 판(턴·2장 선택·고/스톱·총통)이면 차례와 관계없이 즉시 상대 기권승 */
+export function forfeitGame(prev: GameState, seat: Seat): ApplyResult {
+  if (prev.phase === 'ended') return { ok: false, error: '이미 끝난 판입니다' }
+  const state = structuredClone(prev) as GameState
+  const events: GameEvent[] = []
+  const winner = (1 - seat) as Seat
+  const settlement = settle({ ...settlementInput(state, winner, 'forfeit'), missionDone: false })
+  state.phase = 'ended'
+  state.pending = undefined
+  state.chongtongQueue = []
+  state.end = { kind: 'forfeit', winner, settlement }
+  events.push({ type: 'forfeit', player: seat, winner, points: settlement.points })
+  events.push({ type: 'win', player: winner, kind: 'forfeit' })
+  return { ok: true, state, events }
+}
+
 export function applyAction(prev: GameState, seat: Seat, action: Action): ApplyResult {
   if (prev.phase === 'ended') return { ok: false, error: '이미 끝난 판입니다' }
+  if (action.type === 'forfeit') return forfeitGame(prev, seat)
   const allowed = legalActions(prev, seat)
   const match = allowed.some((a) => JSON.stringify(a) === JSON.stringify(action))
   if (!match) return { ok: false, error: '지금은 그 수를 둘 수 없습니다' }

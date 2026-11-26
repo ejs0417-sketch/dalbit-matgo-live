@@ -2,7 +2,7 @@ export type Seat = 0 | 1
 export type Month = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12
 export type CardKind = 'gwang' | 'yeol' | 'tti' | 'pi' | 'bonus'
 export type TtiGroup = 'hong' | 'cheong' | 'cho' | 'plain'
-export type EndKind = 'stop' | 'chongtong' | 'triplePpuk' | 'nagari'
+export type EndKind = 'stop' | 'chongtong' | 'triplePpuk' | 'forfeit' | 'nagari'
 
 export interface CardDef {
   id: string
@@ -141,6 +141,8 @@ export type Action =
   | { type: 'go' }
   | { type: 'stop' }
   | { type: 'pass' }
+  /** v0.5.1 중간 기권: 진행 중인 판이면 차례와 관계없이 언제든 */
+  | { type: 'forfeit' }
 
 export type GameEvent =
   | { type: 'deal' }
@@ -179,6 +181,7 @@ export type GameEvent =
   | { type: 'triple'; player: Seat }
   | { type: 'bak'; kind: 'pi' | 'gwang' | 'meong' | 'gobak'; player: Seat }
   | { type: 'nagari' }
+  | { type: 'forfeit'; player: Seat; winner: Seat; points: number }
   | { type: 'win'; player: Seat; kind: EndKind }
 
 export interface PublicView {

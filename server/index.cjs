@@ -28585,14 +28585,15 @@ function settle(input) {
   const loseGwang = input.captured[loser].filter((id) => CARDS[id]?.kind === "gwang").length;
   let base = input.kind === "chongtong" ? 10 : winBreak.total;
   if (input.kind === "triplePpuk") base = Math.max(base, 7);
-  const goCount = input.kind === "chongtong" ? 0 : input.goCount[winner];
+  if (input.kind === "forfeit") base = Math.max(7, winBreak.total);
+  const goCount = input.kind === "chongtong" || input.kind === "forfeit" ? 0 : input.goCount[winner];
   const goBonus = goCount;
   const subtotal = base + goBonus;
   const factors = [];
   const push = (id, label, mul) => {
     if (mul > 1) factors.push({ id, label, mul });
   };
-  if (input.kind !== "chongtong") {
+  if (input.kind !== "chongtong" && input.kind !== "forfeit") {
     const gMul = goMultiplier(goCount);
     push("go", goCount >= 3 ? `${goCount}\uACE0` : "\uACE0", gMul);
     const shakeMul = input.shakeCount > 0 ? 2 ** input.shakeCount : 1;
@@ -28610,7 +28611,7 @@ function settle(input) {
     push("gobak", "\uACE0\uBC15", gobak);
     push("triple", "\uC0BC\uC5F0\uBED1", input.kind === "triplePpuk" ? 2 : 1);
   }
-  push("nagari", input.nagariMul >= 4 ? `\uB098\uAC00\uB9AC \xD7${input.nagariMul}` : "\uB098\uAC00\uB9AC", input.nagariMul);
+  if (input.kind !== "forfeit") push("nagari", input.nagariMul >= 4 ? `\uB098\uAC00\uB9AC \xD7${input.nagariMul}` : "\uB098\uAC00\uB9AC", input.nagariMul);
   const totalMul = factors.reduce((acc, f) => acc * f.mul, 1);
   const points = subtotal * totalMul;
   return {
@@ -29156,8 +29157,23 @@ function doBomb(state, seat, month, events) {
   maybeSweep(state, seat, events);
   finishTurn(state, seat, events);
 }
+function forfeitGame(prev, seat) {
+  if (prev.phase === "ended") return { ok: false, error: "\uC774\uBBF8 \uB05D\uB09C \uD310\uC785\uB2C8\uB2E4" };
+  const state = structuredClone(prev);
+  const events = [];
+  const winner = 1 - seat;
+  const settlement = settle({ ...settlementInput(state, winner, "forfeit"), missionDone: false });
+  state.phase = "ended";
+  state.pending = void 0;
+  state.chongtongQueue = [];
+  state.end = { kind: "forfeit", winner, settlement };
+  events.push({ type: "forfeit", player: seat, winner, points: settlement.points });
+  events.push({ type: "win", player: winner, kind: "forfeit" });
+  return { ok: true, state, events };
+}
 function applyAction(prev, seat, action) {
   if (prev.phase === "ended") return { ok: false, error: "\uC774\uBBF8 \uB05D\uB09C \uD310\uC785\uB2C8\uB2E4" };
+  if (action.type === "forfeit") return forfeitGame(prev, seat);
   const allowed = legalActions(prev, seat);
   const match = allowed.some((a) => JSON.stringify(a) === JSON.stringify(action));
   if (!match) return { ok: false, error: "\uC9C0\uAE08\uC740 \uADF8 \uC218\uB97C \uB458 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4" };
@@ -29491,14 +29507,14 @@ var WUXIA_AVATARS = [
   { id: "hwang", name: "\uD669\uAE08\uC120\uC778", title: "\uBC31\uBC1C\uB3C4\uC0AC", blurb: "\uAE08\uBD80\uCC44\uB97C \uC811\uC73C\uBA70 \uC2A4\uD1B1\uC744 \uC120\uACE0\uD55C\uB2E4", portrait: "/art/avatars/hwang.webp", accent: "#f3c969" }
 ];
 var WUXIA_CHARACTER_LINES = {
-  bokman: { jjok: "\uC77C\uC12C \uCABD! \uD53C\uB97C \uB0B4\uB193\uAC70\uB77C.", ttadak: "\uC5F0\uD658 \uB530\uB2E5! \uC2B9\uBD80\uB294 \uB05D\uB0AC\uB2E4.", ppuk: "\uD5C8, \uBED1\uC774\uB77C\uB2C8.", firstPpuk: "\uCD08\uC218 \uCCAB\uBED1! +7\uC810 \uBC1B\uACA0\uB2E4.", doublePpuk: "\uC5F0\uD658 \uC5F0\uBED1! +14\uC810\uC774\uB2E4.", go: "\uACE0! \uCC9C\uD558\uB97C \uCDE8\uD558\uACA0\uB2E4.", stop: "\uC2A4\uD1B1. \uC774\uB9CC \uAC70\uB450\uC9C0.", win: "\uAC15\uD638\uC758 \uD310\uB3C8\uC740 \uB0B4 \uAC83\uC774\uB2E4.", lose: "\uC624\uB298\uC740 \uAC80\uC744 \uC811\uACA0\uB2E4.", sweep: "\uD310\uC4F8! \uBC14\uB2E5\uC744 \uBE44\uC6E0\uB2E4.", bomb: "\uD314\uAD18 \uD3ED\uD0C4! \uD53C\uD560 \uACF3 \uC5C6\uB2E4." },
-  sunja: { jjok: "\uD638\uD638, \uCABD\uC774\uAD6C\uB098. \uD53C \uD55C \uC7A5 \uB2E4\uC624.", ttadak: "\uB530\uB2E5! \uB178\uBAA8\uC758 \uC19C\uC528\uB780\uB2E4.", ppuk: "\uC5B4\uC774\uCFE0, \uBED1\uC774 \uB0AC\uB124.", firstPpuk: "\uCCAB\uBED1! +7\uC810 \uAC10\uC0AC\uD788 \uBC1B\uC73C\uB9C8.", doublePpuk: "\uC5F0\uBED1\uC774\uB77C\uB2C8! +14\uC810\uC774\uAD6C\uB098.", go: "\uACE0! \uD55C \uC218 \uB354 \uBCF4\uC790\uAFB8\uB098.", stop: "\uC2A4\uD1B1. \uC774\uB9CC\uD558\uBA74 \uB109\uB109\uD558\uB2E4.", win: "\uD638\uD638, \uC624\uB298 \uAE30\uC138\uAC00 \uC88B\uAD6C\uB098.", lose: "\uC544\uC774\uACE0, \uB2E4\uC74C \uD310\uC5D0 \uBCF4\uC790.", sweep: "\uB9D0\uB054\uD788 \uC4F8\uC5B4 \uB2F4\uC558\uAD6C\uB098.", bomb: "\uD3ED\uD0C4\uC774\uB2E4, \uC870\uC2EC\uD558\uAC70\uB77C." },
-  gang: { jjok: "\uCABD. \uADF8 \uD53C\uB294 \uB0B4 \uBAAB\uC774\uB2E4.", ttadak: "\uB530\uB2E5. \uADF8\uB9BC\uC790\uCC98\uB7FC \uBCA0\uC5C8\uB2E4.", ppuk: "\uBED1\u2026 \uBC29\uC2EC\uD588\uAD70.", firstPpuk: "\uCCAB\uBED1. +7\uC810 \uCC59\uAE34\uB2E4.", doublePpuk: "\uC5F0\uBED1. +14\uC810\uC774\uB2E4.", go: "\uACE0. \uBC24\uC740 \uC544\uC9C1 \uAE4A\uB2E4.", stop: "\uC2A4\uD1B1. \uC5EC\uAE30\uC11C \uB05D\uB0B8\uB2E4.", win: "\uB2EC\uBE5B \uC544\uB798 \uB0B4 \uC2B9\uBD80\uC600\uB2E4.", lose: "\uCE7C\uB0A0\uC774 \uBB34\uB3A0\uAD70.", sweep: "\uBC14\uB2E5, \uD754\uC801\uB3C4 \uC5C6\uC774 \uBE44\uC6E0\uB2E4.", bomb: "\uD3ED\uD0C4. \uD310\uC744 \uB4A4\uC9D1\uB294\uB2E4." },
-  miseon: { jjok: "\uCABD\uC774\uC5D0\uC694. \uD53C \uD55C \uC7A5 \uBC1B\uC744\uAC8C\uC694.", ttadak: "\uB530\uB2E5! \uB124 \uC7A5 \uBAA8\uB450 \uC81C \uAC83\uC774\uB124\uC694.", ppuk: "\uC5B4\uBA38, \uBED1\uC774 \uB098\uBC84\uB838\uB124\uC694.", firstPpuk: "\uCCAB\uBED1! +7\uC810 \uAE30\uBD84 \uC88B\uB124\uC694.", doublePpuk: "\uC5F0\uBED1! +14\uC810\uAE4C\uC9C0 \uC774\uC5B4\uC84C\uC5B4\uC694.", go: "\uACE0! \uC870\uAE08 \uB354 \uB098\uC544\uAC08\uAC8C\uC694.", stop: "\uC2A4\uD1B1. \uC544\uB984\uB2F5\uAC8C \uB9C8\uBB34\uB9AC\uD560\uAC8C\uC694.", win: "\uD64D\uB828\uCC98\uB7FC \uD654\uB824\uD55C \uC2B9\uB9AC\uB124\uC694.", lose: "\uB2E4\uC74C \uC218\uC5D0\uC11C \uB418\uAC1A\uC744\uAC8C\uC694.", sweep: "\uBC14\uB2E5\uC744 \uB2E8\uC815\uD788 \uBE44\uC6E0\uC5B4\uC694.", bomb: "\uD3ED\uD0C4\uC774\uC5D0\uC694, \uBE44\uCF1C \uC11C\uC138\uC694." },
-  jangsu: { jjok: "\uCABD\uC774\uB2E4! \uD53C \uD55C \uC7A5 \uC774\uB9AC \uB0B4!", ttadak: "\uB530\uB2E5! \uBC14\uB78C\uCC98\uB7FC \uC2DC\uC6D0\uD558\uB2E4!", ppuk: "\uC73C\uC545, \uBED1\uC774\uB124! \uD5C8\uD5C8!", firstPpuk: "\uCCAB\uBED1! \uC2DC\uC791\uBD80\uD130 +7\uC810!", doublePpuk: "\uC5F0\uBED1 \uB300\uBC15! +14\uC810\uC774\uB2E4!", go: "\uACE0! \uCCAD\uD48D\uC740 \uBA48\uCD94\uC9C0 \uC54A\uB294\uB2E4!", stop: "\uC2A4\uD1B1! \uC774\uB9CC\uD558\uBA74 \uB300\uC2B9\uC774\uC9C0!", win: "\uD558\uD558! \uAC15\uD638\uAC00 \uB2E4 \uB0B4 \uD310\uC774\uB2E4!", lose: "\uD5C8\uD5C8, \uD55C \uC218 \uBC30\uC6E0\uB2E4!", sweep: "\uD310\uC4F8! \uC2F9 \uB2E4 \uC4F8\uC5B4 \uB2F4\uC558\uB2E4!", bomb: "\uD3ED\uD0C4 \uB098\uAC04\uB2E4! \uAF49 \uC7A1\uC544\uB77C!" },
-  hye: { jjok: "\uCABD.", ttadak: "\uB530\uB2E5. \uC608\uC815\uB41C \uC77C\uACA9.", ppuk: "\u2026\uBED1.", firstPpuk: "\uCCAB\uBED1. +7\uC810.", doublePpuk: "\uC5F0\uBED1. +14\uC810.", go: "\uACE0.", stop: "\uC2A4\uD1B1.", win: "\uC218\uC77D\uAE30\uB294 \uC644\uBCBD\uD588\uB2E4.", lose: "\uB2E4\uC74C\uC5D4 \uBE48\uD2C8\uC5C6\uB2E4.", sweep: "\uBC14\uB2E5, \uC18C\uBA78.", bomb: "\uD3ED\uD0C4. \uBD80\uC11C\uC838\uB77C." },
-  dalho: { jjok: "\uCABD! \uCABD! \uD654\uB048\uD558\uAC8C \uD53C \uB0B4\uB194!", ttadak: "\uB530\uB2E5\uC774\uB2E4! \uBD88\uBD99\uC5C8\uB2E4!", ppuk: "\uD06C\uC73D, \uBED1\uC774\uB77C\uB2C8!", firstPpuk: "\uCCAB\uBED1! +7\uC810 \uD130\uC84C\uB2E4!", doublePpuk: "\uC5F0\uBED1! +14\uC810 \uBBF8\uCCE4\uB2E4!", go: "\uACE0\uACE0\uACE0! \uB05D\uAE4C\uC9C0 \uAC04\uB2E4!", stop: "\uC2A4\uD1B1! \uC81C\uB300\uB85C \uD55C \uBC29 \uBA39\uC600\uC9C0!", win: "\uC73C\uD558\uD558! \uAC15\uD638 \uCD5C\uAC15\uC774\uB2E4!", lose: "\uC73C\uC545, \uB2E4\uC74C \uD310\uC5D4 \uC548 \uC9C4\uB2E4!", sweep: "\uC2F9\uC4F8\uC774! \uBD88\uD0DC\uC6E0\uB2E4!", bomb: "\uD654\uC5FC \uD3ED\uD0C4 \uD22C\uD558!" },
-  hwang: { jjok: "\uCABD\uC774\uB85C\uAD70. \uD53C \uD55C \uC7A5\uC774\uBA74 \uC871\uD558\uB2E4.", ttadak: "\uB530\uB2E5. \uC808\uBB18\uD55C \uC218\uB85C\uB2E4.", ppuk: "\uBED1 \uB610\uD55C \uB3C4\uC758 \uC77C\uBD80\uB2C8\uB77C.", firstPpuk: "\uCCAB\uBED1\uC774\uAD6C\uB098. +7\uC810\uC744 \uC5BB\uB294\uB2E4.", doublePpuk: "\uC5F0\uBED1\uC774\uB77C\u2026 +14\uC810\uC774\uB85C\uB2E4.", go: "\uACE0. \uC544\uC9C1 \uB54C\uAC00 \uB0A8\uC558\uB2E4.", stop: "\uC2A4\uD1B1. \uACFC\uC720\uBD88\uAE09\uC774\uB2C8\uB77C.", win: "\uB3C4\uC0AC\uB294 \uC774\uBBF8 \uD310\uC744 \uC77D\uC5C8\uB178\uB77C.", lose: "\uD328\uBC30\uB3C4 \uC88B\uC740 \uAC00\uB974\uCE68\uC774\uC9C0.", sweep: "\uD5C8\uACF5\uCC98\uB7FC \uBC14\uB2E5\uC744 \uBE44\uC6E0\uB178\uB77C.", bomb: "\uD314\uAD18 \uD3ED\uD0C4\uC73C\uB85C \uC815\uB9AC\uD558\uB9C8." }
+  bokman: { jjok: "\uC77C\uC12C \uCABD! \uD53C\uB97C \uB0B4\uB193\uAC70\uB77C.", ttadak: "\uC5F0\uD658 \uB530\uB2E5! \uC2B9\uBD80\uB294 \uB05D\uB0AC\uB2E4.", ppuk: "\uD5C8, \uBED1\uC774\uB77C\uB2C8.", firstPpuk: "\uCD08\uC218 \uCCAB\uBED1! +7\uC810 \uBC1B\uACA0\uB2E4.", doublePpuk: "\uC5F0\uD658 \uC5F0\uBED1! +14\uC810\uC774\uB2E4.", go: "\uACE0! \uCC9C\uD558\uB97C \uCDE8\uD558\uACA0\uB2E4.", stop: "\uC2A4\uD1B1. \uC774\uB9CC \uAC70\uB450\uC9C0.", win: "\uAC15\uD638\uC758 \uD310\uB3C8\uC740 \uB0B4 \uAC83\uC774\uB2E4.", lose: "\uC624\uB298\uC740 \uAC80\uC744 \uC811\uACA0\uB2E4.", sweep: "\uD310\uC4F8! \uBC14\uB2E5\uC744 \uBE44\uC6E0\uB2E4.", bomb: "\uD314\uAD18 \uD3ED\uD0C4! \uD53C\uD560 \uACF3 \uC5C6\uB2E4.", surrender: "\uC774 \uD310\uC740 \uAE54\uB054\uD788 \uC811\uACA0\uC18C. \uB2E4\uC74C \uD310\uC5D0 \uB2E4\uC2DC \uACA8\uB8E8\uC138.", oppSurrender: "\uD5C8\uD5C8, \uD56D\uBCF5\uC778\uAC00? \uD604\uBA85\uD55C \uACB0\uB2E8\uC774\uAD70." },
+  sunja: { jjok: "\uD638\uD638, \uCABD\uC774\uAD6C\uB098. \uD53C \uD55C \uC7A5 \uB2E4\uC624.", ttadak: "\uB530\uB2E5! \uB178\uBAA8\uC758 \uC19C\uC528\uB780\uB2E4.", ppuk: "\uC5B4\uC774\uCFE0, \uBED1\uC774 \uB0AC\uB124.", firstPpuk: "\uCCAB\uBED1! +7\uC810 \uAC10\uC0AC\uD788 \uBC1B\uC73C\uB9C8.", doublePpuk: "\uC5F0\uBED1\uC774\uB77C\uB2C8! +14\uC810\uC774\uAD6C\uB098.", go: "\uACE0! \uD55C \uC218 \uB354 \uBCF4\uC790\uAFB8\uB098.", stop: "\uC2A4\uD1B1. \uC774\uB9CC\uD558\uBA74 \uB109\uB109\uD558\uB2E4.", win: "\uD638\uD638, \uC624\uB298 \uAE30\uC138\uAC00 \uC88B\uAD6C\uB098.", lose: "\uC544\uC774\uACE0, \uB2E4\uC74C \uD310\uC5D0 \uBCF4\uC790.", sweep: "\uB9D0\uB054\uD788 \uC4F8\uC5B4 \uB2F4\uC558\uAD6C\uB098.", bomb: "\uD3ED\uD0C4\uC774\uB2E4, \uC870\uC2EC\uD558\uAC70\uB77C.", surrender: "\uC544\uC774\uACE0, \uC774 \uD310\uC740 \uC5EC\uAE30\uC11C \uC811\uC5B4\uC57C\uACA0\uAD6C\uB098.", oppSurrender: "\uD638\uD638, \uC77C\uCC0D \uC811\uB294 \uAC83\uB3C4 \uC9C0\uD61C\uB780\uB2E4." },
+  gang: { jjok: "\uCABD. \uADF8 \uD53C\uB294 \uB0B4 \uBAAB\uC774\uB2E4.", ttadak: "\uB530\uB2E5. \uADF8\uB9BC\uC790\uCC98\uB7FC \uBCA0\uC5C8\uB2E4.", ppuk: "\uBED1\u2026 \uBC29\uC2EC\uD588\uAD70.", firstPpuk: "\uCCAB\uBED1. +7\uC810 \uCC59\uAE34\uB2E4.", doublePpuk: "\uC5F0\uBED1. +14\uC810\uC774\uB2E4.", go: "\uACE0. \uBC24\uC740 \uC544\uC9C1 \uAE4A\uB2E4.", stop: "\uC2A4\uD1B1. \uC5EC\uAE30\uC11C \uB05D\uB0B8\uB2E4.", win: "\uB2EC\uBE5B \uC544\uB798 \uB0B4 \uC2B9\uBD80\uC600\uB2E4.", lose: "\uCE7C\uB0A0\uC774 \uBB34\uB3A0\uAD70.", sweep: "\uBC14\uB2E5, \uD754\uC801\uB3C4 \uC5C6\uC774 \uBE44\uC6E0\uB2E4.", bomb: "\uD3ED\uD0C4. \uD310\uC744 \uB4A4\uC9D1\uB294\uB2E4.", surrender: "\uCE7C\uC744 \uAC70\uB454\uB2E4. \uC774\uBC88 \uD310\uC740 \uB124 \uBAAB\uC774\uB2E4.", oppSurrender: "\uAE30\uAD8C\uC778\uAC00. \uAE54\uB054\uD558\uAD70." },
+  miseon: { jjok: "\uCABD\uC774\uC5D0\uC694. \uD53C \uD55C \uC7A5 \uBC1B\uC744\uAC8C\uC694.", ttadak: "\uB530\uB2E5! \uB124 \uC7A5 \uBAA8\uB450 \uC81C \uAC83\uC774\uB124\uC694.", ppuk: "\uC5B4\uBA38, \uBED1\uC774 \uB098\uBC84\uB838\uB124\uC694.", firstPpuk: "\uCCAB\uBED1! +7\uC810 \uAE30\uBD84 \uC88B\uB124\uC694.", doublePpuk: "\uC5F0\uBED1! +14\uC810\uAE4C\uC9C0 \uC774\uC5B4\uC84C\uC5B4\uC694.", go: "\uACE0! \uC870\uAE08 \uB354 \uB098\uC544\uAC08\uAC8C\uC694.", stop: "\uC2A4\uD1B1. \uC544\uB984\uB2F5\uAC8C \uB9C8\uBB34\uB9AC\uD560\uAC8C\uC694.", win: "\uD64D\uB828\uCC98\uB7FC \uD654\uB824\uD55C \uC2B9\uB9AC\uB124\uC694.", lose: "\uB2E4\uC74C \uC218\uC5D0\uC11C \uB418\uAC1A\uC744\uAC8C\uC694.", sweep: "\uBC14\uB2E5\uC744 \uB2E8\uC815\uD788 \uBE44\uC6E0\uC5B4\uC694.", bomb: "\uD3ED\uD0C4\uC774\uC5D0\uC694, \uBE44\uCF1C \uC11C\uC138\uC694.", surrender: "\uC774\uBC88 \uD310\uC740 \uC5EC\uAE30\uC11C \uBB3C\uB7EC\uB0A0\uAC8C\uC694.", oppSurrender: "\uC5B4\uBA38, \uAE30\uAD8C\uD558\uC2DC\uB124\uC694. \uC798 \uBC1B\uC744\uAC8C\uC694." },
+  jangsu: { jjok: "\uCABD\uC774\uB2E4! \uD53C \uD55C \uC7A5 \uC774\uB9AC \uB0B4!", ttadak: "\uB530\uB2E5! \uBC14\uB78C\uCC98\uB7FC \uC2DC\uC6D0\uD558\uB2E4!", ppuk: "\uC73C\uC545, \uBED1\uC774\uB124! \uD5C8\uD5C8!", firstPpuk: "\uCCAB\uBED1! \uC2DC\uC791\uBD80\uD130 +7\uC810!", doublePpuk: "\uC5F0\uBED1 \uB300\uBC15! +14\uC810\uC774\uB2E4!", go: "\uACE0! \uCCAD\uD48D\uC740 \uBA48\uCD94\uC9C0 \uC54A\uB294\uB2E4!", stop: "\uC2A4\uD1B1! \uC774\uB9CC\uD558\uBA74 \uB300\uC2B9\uC774\uC9C0!", win: "\uD558\uD558! \uAC15\uD638\uAC00 \uB2E4 \uB0B4 \uD310\uC774\uB2E4!", lose: "\uD5C8\uD5C8, \uD55C \uC218 \uBC30\uC6E0\uB2E4!", sweep: "\uD310\uC4F8! \uC2F9 \uB2E4 \uC4F8\uC5B4 \uB2F4\uC558\uB2E4!", bomb: "\uD3ED\uD0C4 \uB098\uAC04\uB2E4! \uAF49 \uC7A1\uC544\uB77C!", surrender: "\uC73C\uD558\uD558, \uC774 \uD310\uC740 \uD56D\uBCF5! \uB2E4\uC74C \uD310\uC5D4 \uC548 \uC9C4\uB2E4!", oppSurrender: "\uC624\uD638, \uAE30\uAD8C\uC2B9\uC778\uAC00! \uC798 \uBA39\uACA0\uB124!" },
+  hye: { jjok: "\uCABD.", ttadak: "\uB530\uB2E5. \uC608\uC815\uB41C \uC77C\uACA9.", ppuk: "\u2026\uBED1.", firstPpuk: "\uCCAB\uBED1. +7\uC810.", doublePpuk: "\uC5F0\uBED1. +14\uC810.", go: "\uACE0.", stop: "\uC2A4\uD1B1.", win: "\uC218\uC77D\uAE30\uB294 \uC644\uBCBD\uD588\uB2E4.", lose: "\uB2E4\uC74C\uC5D4 \uBE48\uD2C8\uC5C6\uB2E4.", sweep: "\uBC14\uB2E5, \uC18C\uBA78.", bomb: "\uD3ED\uD0C4. \uBD80\uC11C\uC838\uB77C.", surrender: "\u2026\uAE30\uAD8C. \uB2E4\uC74C \uD310.", oppSurrender: "\uD3EC\uAE30\uC778\uAC00. \uD604\uBA85\uD558\uAD70." },
+  dalho: { jjok: "\uCABD! \uCABD! \uD654\uB048\uD558\uAC8C \uD53C \uB0B4\uB194!", ttadak: "\uB530\uB2E5\uC774\uB2E4! \uBD88\uBD99\uC5C8\uB2E4!", ppuk: "\uD06C\uC73D, \uBED1\uC774\uB77C\uB2C8!", firstPpuk: "\uCCAB\uBED1! +7\uC810 \uD130\uC84C\uB2E4!", doublePpuk: "\uC5F0\uBED1! +14\uC810 \uBBF8\uCCE4\uB2E4!", go: "\uACE0\uACE0\uACE0! \uB05D\uAE4C\uC9C0 \uAC04\uB2E4!", stop: "\uC2A4\uD1B1! \uC81C\uB300\uB85C \uD55C \uBC29 \uBA39\uC600\uC9C0!", win: "\uC73C\uD558\uD558! \uAC15\uD638 \uCD5C\uAC15\uC774\uB2E4!", lose: "\uC73C\uC545, \uB2E4\uC74C \uD310\uC5D4 \uC548 \uC9C4\uB2E4!", sweep: "\uC2F9\uC4F8\uC774! \uBD88\uD0DC\uC6E0\uB2E4!", bomb: "\uD654\uC5FC \uD3ED\uD0C4 \uD22C\uD558!", surrender: "\uD06C\uC73D, \uC774 \uD310\uC740 \uD3EC\uAE30\uB2E4! \uBC14\uB85C \uD55C \uD310 \uB354 \uBD99\uC790!", oppSurrender: "\uD558\uD558! \uAE30\uAD8C\uC2B9! \uD654\uB048\uD558\uAC8C \uC778\uC815\uD558\uB124!" },
+  hwang: { jjok: "\uCABD\uC774\uB85C\uAD70. \uD53C \uD55C \uC7A5\uC774\uBA74 \uC871\uD558\uB2E4.", ttadak: "\uB530\uB2E5. \uC808\uBB18\uD55C \uC218\uB85C\uB2E4.", ppuk: "\uBED1 \uB610\uD55C \uB3C4\uC758 \uC77C\uBD80\uB2C8\uB77C.", firstPpuk: "\uCCAB\uBED1\uC774\uAD6C\uB098. +7\uC810\uC744 \uC5BB\uB294\uB2E4.", doublePpuk: "\uC5F0\uBED1\uC774\uB77C\u2026 +14\uC810\uC774\uB85C\uB2E4.", go: "\uACE0. \uC544\uC9C1 \uB54C\uAC00 \uB0A8\uC558\uB2E4.", stop: "\uC2A4\uD1B1. \uACFC\uC720\uBD88\uAE09\uC774\uB2C8\uB77C.", win: "\uB3C4\uC0AC\uB294 \uC774\uBBF8 \uD310\uC744 \uC77D\uC5C8\uB178\uB77C.", lose: "\uD328\uBC30\uB3C4 \uC88B\uC740 \uAC00\uB974\uCE68\uC774\uC9C0.", sweep: "\uD5C8\uACF5\uCC98\uB7FC \uBC14\uB2E5\uC744 \uBE44\uC6E0\uB178\uB77C.", bomb: "\uD314\uAD18 \uD3ED\uD0C4\uC73C\uB85C \uC815\uB9AC\uD558\uB9C8.", surrender: "\uB54C\uB97C \uC544\uB294 \uAC83\uB3C4 \uB3C4\uB2C8\uB77C. \uC774 \uD310\uC740 \uC811\uACA0\uC18C.", oppSurrender: "\uACFC\uC720\uBD88\uAE09\uC744 \uC544\uB294\uAD70. \uAE30\uAD8C\uC2B9\uC744 \uBC1B\uACA0\uB178\uB77C." }
 };
 
 // src/shared/cast.ts
@@ -29784,6 +29800,7 @@ function armTurn(room) {
 function titleFor(kind) {
   if (kind === "chongtong") return "\uCD1D\uD1B5";
   if (kind === "triplePpuk") return "\uC0BC\uC5F0\uBED1";
+  if (kind === "forfeit") return "\uAE30\uAD8C";
   if (kind === "nagari") return "\uB098\uAC00\uB9AC";
   return "\uC2A4\uD1B1";
 }
@@ -29813,11 +29830,14 @@ function applyPayout(room) {
   const paid = Math.min(bank, bill.money);
   setSeatMoney(room, loser, bank - paid);
   setSeatMoney(room, bill.winner, seatMoney(room, bill.winner) + paid);
+  const quitter = end.kind === "forfeit" ? loser : void 0;
+  const quitterName = quitter !== void 0 ? room.seats[quitter].nickname || "\uC0C1\uB300" : "";
   room.showdown = {
     nagari: false,
-    forfeit: false,
+    forfeit: end.kind === "forfeit",
+    forfeitBy: quitter,
     title: titleFor(end.kind),
-    subtitle: end.kind === "chongtong" ? "\uAC19\uC740 \uB2EC \uB124 \uC7A5\uC73C\uB85C \uD310\uC744 \uB2EB\uC558\uC2B5\uB2C8\uB2E4" : end.kind === "triplePpuk" ? "\uBED1\uC774 \uC138 \uBC88 \uC774\uC5B4\uC84C\uC2B5\uB2C8\uB2E4" : "\uC810\uC218\uB97C \uD655\uC815\uD588\uC2B5\uB2C8\uB2E4",
+    subtitle: end.kind === "chongtong" ? "\uAC19\uC740 \uB2EC \uB124 \uC7A5\uC73C\uB85C \uD310\uC744 \uB2EB\uC558\uC2B5\uB2C8\uB2E4" : end.kind === "triplePpuk" ? "\uBED1\uC774 \uC138 \uBC88 \uC774\uC5B4\uC84C\uC2B5\uB2C8\uB2E4" : end.kind === "forfeit" ? `${quitterName}\uB2D8\uC774 \uC911\uAC04\uC5D0 \uAE30\uAD8C\uD588\uC2B5\uB2C8\uB2E4 \xB7 max(7\uC810, \uD604\uC7AC \uC810\uC218) \uC815\uC0B0` : "\uC810\uC218\uB97C \uD655\uC815\uD588\uC2B5\uB2C8\uB2E4",
     winner: bill.winner,
     base: bill.base,
     goBonus: bill.goBonus,
@@ -30130,6 +30150,22 @@ function onAction(session, action) {
   const room = roomOf(session);
   if (!room?.game || session.seat === void 0) return;
   if (room.showdown) return;
+  if (action.type === "forfeit") {
+    if (room.game.phase === "ended") return;
+    const result2 = applyAction(room.game, session.seat, action);
+    if (!result2.ok) {
+      send(session.ws, { type: "error", message: result2.error });
+      return;
+    }
+    clearTurnTimers(room);
+    room.timeouts[0] = 0;
+    room.timeouts[1] = 0;
+    room.game = result2.state;
+    applyPayout(room);
+    pushRoom(room, result2.events);
+    armTurn(room);
+    return;
+  }
   if (!mayAct(decider(room.game), session.seat)) {
     send(session.ws, { type: "error", message: "\uC9C0\uAE08\uC740 \uB2F9\uC2E0 \uCC28\uB840\uAC00 \uC544\uB2D9\uB2C8\uB2E4." });
     return;

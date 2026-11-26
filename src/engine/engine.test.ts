@@ -9,6 +9,7 @@ import {
   closeByForfeit,
   conserved,
   createGame,
+  decider,
   legalActions,
   nextRound,
   sandbox,
@@ -754,5 +755,41 @@ describe('v0.5 물리 연출 페이로드', () => {
     expect(ev.handIds).toEqual(['m04-yeol', 'm04-tti', 'm04-pi1'])
     expect(ev.floorIds).toEqual(['m04-pi2'])
     expect(ev.cardIds).toEqual([...ev.handIds!, ...ev.floorIds!])
+  })
+})
+
+describe('v0.5.1 중간 기권 (forfeit)', () => {
+  it('상대 차례·고/스톱 중에도 기권하면 즉시 상대 기권승, max(7, 상대 점수) × 점당 정산, 중복 기권은 거절', () => {
+    const { state } = createGame({ seed: 7 })
+    const quitter: Seat = decider(state) === 0 ? 1 : 0 // 차례가 아닌 쪽이 기권
+    const res = applyAction(state, quitter, { type: 'forfeit' })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    const winner = (1 - quitter) as Seat
+    expect(res.state.phase).toBe('ended')
+    expect(res.state.end?.kind).toBe('forfeit')
+    expect(res.state.end?.winner).toBe(winner)
+    const bill = res.state.end?.settlement
+    expect(bill?.points).toBe(Math.max(7, breakdown(state.players[winner].captured, state.players[winner].gukjinAsPi).total))
+    expect(bill?.money).toBe((bill?.points ?? 0) * state.pointValue)
+    expect(bill?.factors).toEqual([])
+    expect(res.events.some((e) => e.type === 'forfeit' && e.player === quitter && e.winner === winner)).toBe(true)
+    expect(applyAction(res.state, winner, { type: 'forfeit' }).ok).toBe(false)
+    expect(nextRound(res.state).seon).toBe(winner)
+
+    // 상대가 이미 7점을 넘겼으면 그 점수로 정산 (고/스톱 선택 중 기권)
+    const big = structuredClone(state) as GameState
+    const gwangs = CARD_LIST.filter((c) => c.kind === 'gwang').map((c) => c.id)
+    big.players[0].captured = [...gwangs]
+    big.players[0].hand = big.players[0].hand.filter((id) => !gwangs.includes(id))
+    big.players[1].hand = big.players[1].hand.filter((id) => !gwangs.includes(id))
+    big.floor = big.floor.filter((id) => !gwangs.includes(id))
+    big.deck = big.deck.filter((id) => !gwangs.includes(id))
+    big.phase = 'goStop'
+    big.turn = 0
+    const score = breakdown(big.players[0].captured, false).total
+    expect(score).toBeGreaterThan(7)
+    const r2 = applyAction(big, 1, { type: 'forfeit' })
+    expect(r2.ok && r2.state.end?.settlement?.points).toBe(score)
   })
 })

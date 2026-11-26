@@ -21,6 +21,9 @@ export function HwatuCard({
   mini = false,
   pick = false,
   label,
+  extra,
+  badge,
+  badgeTitle,
   onClick,
   onFocusMonth,
   onBlurMonth,
@@ -31,6 +34,11 @@ export function HwatuCard({
   mini?: boolean
   pick?: boolean
   label?: string
+  /** v0.5.1 추가 클래스 (matchable / floor-match-hint 등) */
+  extra?: string
+  /** v0.5.1 우상단 아주 작은 표식 (그림을 가리지 않는 점·아이콘) */
+  badge?: string
+  badgeTitle?: string
   onClick?: () => void
   onFocusMonth?: () => void
   onBlurMonth?: () => void
@@ -40,9 +48,11 @@ export function HwatuCard({
   const alt = back ? '화투 뒷면' : def?.name ?? '폭탄패'
   return (
     <div
-      className={`hwatu${def?.kind === 'bonus' ? ' bonus' : ''}${mini ? ' mini' : ''}${hot ? ' hot' : ''}${pick ? ' pick' : ''}${onClick ? ' live' : ''}`}
+      className={`hwatu${def?.kind === 'bonus' ? ' bonus' : ''}${mini ? ' mini' : ''}${hot ? ' hot' : ''}${pick ? ' pick' : ''}${onClick ? ' live' : ''}${extra ? ` ${extra}` : ''}`}
       style={{ ['--tilt' as string]: `${id && !mini ? tiltOf(id) : 0}deg` }}
       data-card={id && !back ? id : undefined}
+      data-match-tag={badgeTitle}
+      title={badgeTitle}
       onClick={onClick}
       onPointerDown={onFocusMonth}
       onPointerEnter={onFocusMonth}
@@ -54,6 +64,7 @@ export function HwatuCard({
     >
       <img src={src} alt={alt} draggable={false} />
       {label && <span className="flag">{label}</span>}
+      {badgeTitle && <span className="match-badge" aria-label={badgeTitle}>{badge}</span>}
     </div>
   )
 }

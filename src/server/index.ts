@@ -55,6 +55,8 @@ interface SeatSlot {
 interface Showdown {
   nagari: boolean
   forfeit: boolean
+  /** v0.5.1 중간 기권한 자리 (접속 끊김 기권은 undefined) */
+  forfeitBy?: Seat
   title: string
   subtitle: string
   winner?: Seat
@@ -381,6 +383,7 @@ function armTurn(room: Room) {
 function titleFor(kind: string) {
   if (kind === 'chongtong') return '총통'
   if (kind === 'triplePpuk') return '삼연뻑'
+  if (kind === 'forfeit') return '기권'
   if (kind === 'nagari') return '나가리'
   return '스톱'
 }
@@ -411,11 +414,14 @@ function applyPayout(room: Room) {
   const paid = Math.min(bank, bill.money)
   setSeatMoney(room, loser, bank - paid)
   setSeatMoney(room, bill.winner, seatMoney(room, bill.winner) + paid)
+  const quitter = end.kind === 'forfeit' ? loser : undefined
+  const quitterName = quitter !== undefined ? room.seats[quitter].nickname || '상대' : ''
   room.showdown = {
     nagari: false,
-    forfeit: false,
+    forfeit: end.kind === 'forfeit',
+    forfeitBy: quitter,
     title: titleFor(end.kind),
-    subtitle: end.kind === 'chongtong' ? '같은 달 네 장으로 판을 닫았습니다' : end.kind === 'triplePpuk' ? '뻑이 세 번 이어졌습니다' : '점수를 확정했습니다',
+    subtitle: end.kind === 'chongtong' ? '같은 달 네 장으로 판을 닫았습니다' : end.kind === 'triplePpuk' ? '뻑이 세 번 이어졌습니다' : end.kind === 'forfeit' ? `${quitterName}님이 중간에 기권했습니다 · max(7점, 현재 점수) 정산` : '점수를 확정했습니다',
     winner: bill.winner,
     base: bill.base,
     goBonus: bill.goBonus,
@@ -741,6 +747,23 @@ function onAction(session: Session, action: Action) {
   const room = roomOf(session)
   if (!room?.game || session.seat === undefined) return
   if (room.showdown) return
+  // v0.5.1 중간 기권: 상대 차례·2장 선택·고/스톱 중에도 즉시 (중복 정산은 showdown/phase 가드로 차단)
+  if (action.type === 'forfeit') {
+    if (room.game.phase === 'ended') return
+    const result = applyAction(room.game, session.seat, action)
+    if (!result.ok) {
+      send(session.ws, { type: 'error', message: result.error })
+      return
+    }
+    clearTurnTimers(room)
+    room.timeouts[0] = 0
+    room.timeouts[1] = 0
+    room.game = result.state
+    applyPayout(room)
+    pushRoom(room, result.events)
+    armTurn(room)
+    return
+  }
   if (!mayAct(decider(room.game), session.seat)) {
     send(session.ws, { type: 'error', message: '지금은 당신 차례가 아닙니다.' })
     return

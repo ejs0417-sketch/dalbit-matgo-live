@@ -192,21 +192,23 @@ export class WuxiaAudioEngine {
     const t = this.ctx.currentTime;
 
     switch (kind) {
-      case 'kung': this.taiko(t, 150, 0.22, 0.85); break;
-      case 'jjak': this.slash(t, 2600, 0.09, 0.52); this.hit(t, 1280, 0.04, 0.62); break;
-      case 'slap': this.hit(t, 180, 0.09, 0.5); break;
-      case 'flip': this.hit(t, 340, 0.05, 0.3); break;
+      case 'kung': this.chakSnap(t, 0.96); break;
+      case 'jjak': this.chakChak(t); break;
+      case 'slap': this.chakSnap(t, 0.9); break;
+      case 'flip': this.chakSnap(t, 0.68); break;
       case 'shuffle':
         for (let i = 0; i < 6; i++) this.hit(t + i * 0.045, 220 + i * 32, 0.04, 0.22);
         break;
       case 'tick': this.hit(t, 920, 0.04, 0.28); break;
       case 'stamp': this.taiko(t, 125, 0.14, 0.65); break;
       case 'coin': this.coinShower(t, 3, 0.055); break;
+      case 'scoreUp': this.scoreUpChime(t, 3, true); break;
+      case 'surrender': this.surrenderGong(t); break;
       case 'steal': this.slash(t, 1800, 0.1, 0.35); this.chime(t + 0.04, [659, 880], 0.12); break;
       case 'seonPick': this.hit(t, 420, 0.06, 0.4); break;
       case 'seonWin': this.taiko(t, 130, 0.2, 0.6); this.chime(t + 0.05, [523, 659, 784, 1046], 0.22); break;
 
-      case 'jjok': this.slash(t, 2400, 0.14, 0.55); this.chime(t + 0.04, [587, 880], 0.16); break;
+      case 'jjok': this.jjokKiss(t); break;
       case 'ttadak':
         this.slash(t, 2200, 0.12, 0.5);
         this.slash(t + 0.1, 3000, 0.14, 0.6);
@@ -439,20 +441,160 @@ export class WuxiaAudioEngine {
   }
 
   // ── 실물 화투패 타격·가져오기·피 뺏기·뻑 포개기·폭탄 3장 동시 투하 SFX ──
-  /** 바닥에 패를 "찰싹! 딱!" 내려치는 소리 */
+  /** 바닥에 패를 "착!" 내려치는 소리 */
   playCardSlap(): void {
     const t = this.now();
     if (t === null) return;
-    this.hit(t, 360, 0.055, 0.72);
-    this.hit(t + 0.012, 1180, 0.032, 0.52);
+    this.chakSnap(t, 0.96);
   }
 
-  /** 바닥 패와 딱 맞물려 부딪히는 화투 "딱!" 소리 */
+  /** 바닥 패에 딱 들러붙을 때 찰진 "착! 착!" 소리 */
   playCardClack(): void {
     const t = this.now();
     if (t === null) return;
-    this.hit(t, 1680, 0.028, 0.68);
-    this.hit(t + 0.018, 860, 0.045, 0.55);
+    this.chakChak(t);
+  }
+
+  /** 중간 기권(항복) 전용 효과음: 묵직한 징 + 패를 접는 하강 3음 */
+  playSurrender(): void {
+    const t = this.now();
+    if (t === null) return;
+    this.surrenderGong(t);
+  }
+
+  private surrenderGong(t: number): void {
+    this.gong(t, 0.72);
+    this.chime(t + 0.06, [440, 392, 293.66], 0.14);
+  }
+
+  /** 점수 날 때마다 맑게 올라가는 점수 상승 효과음 (점수가 높을수록 음정 상승) */
+  playScoreUp(points = 1, isMine = true): void {
+    const t = this.now();
+    if (t === null) return;
+    this.scoreUpChime(t, points, isMine);
+  }
+
+  private scoreUpChime(t: number, points: number, isMine: boolean): void {
+    const scale = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5, 1174.66, 1318.51];
+    const step = Math.max(0, Math.min(scale.length - 2, Math.floor(points / 2)));
+    if (isMine) {
+      const f1 = scale[step];
+      const f2 = scale[Math.min(scale.length - 1, step + 1)];
+      const f3 = points >= 7 ? scale[scale.length - 1] * 1.25 : f2 * 1.25;
+      this.chime(t, points >= 3 ? [f1, f2, f3] : [f1, f2], 0.16);
+    } else {
+      // 상대 점수 상승: 낮고 짧은 경고 2음
+      this.chime(t, [392, 330], 0.13);
+    }
+  }
+
+  /** 쪽! 찰진 "쪼~옥!" 입맞춤 효과음 */
+  playJjokKiss(): void {
+    const t = this.now();
+    if (t === null) return;
+    this.jjokKiss(t);
+  }
+
+  /** 화투패가 담요/패에 찰지게 달라붙는 단발 "착!" 합성 */
+  private chakSnap(t: number, intensity = 1.0): void {
+    if (!this.ctx || !this.sfxGain || !this.noise) return;
+    // 1) 고역 화투패 표면 스냅 노이즈 (18ms)
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noise;
+    const bp = this.ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(2450, t);
+    bp.Q.value = 1.6;
+    const ng = this.ctx.createGain();
+    ng.gain.setValueAtTime(0.72 * intensity, t);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.024);
+    src.connect(bp); bp.connect(ng); ng.connect(this.sfxGain);
+    src.start(t); src.stop(t + 0.03);
+
+    // 2) 베이클라이트/플라스틱 패 특유의 경쾌한 "착!" 클릭 (1480 -> 580Hz)
+    const osc = this.ctx.createOscillator();
+    const og = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1480, t);
+    osc.frequency.exponentialRampToValueAtTime(580, t + 0.028);
+    og.gain.setValueAtTime(0.58 * intensity, t);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.034);
+    osc.connect(og); og.connect(this.sfxGain);
+    osc.start(t); osc.stop(t + 0.04);
+
+    // 3) 담요 바닥에 붙는 짧은 저중역 펀치
+    const body = this.ctx.createOscillator();
+    const bg = this.ctx.createGain();
+    body.type = 'sine';
+    body.frequency.setValueAtTime(340, t);
+    body.frequency.exponentialRampToValueAtTime(120, t + 0.036);
+    bg.gain.setValueAtTime(0.45 * intensity, t);
+    bg.gain.exponentialRampToValueAtTime(0.0001, t + 0.042);
+    body.connect(bg); bg.connect(this.sfxGain);
+    body.start(t); body.stop(t + 0.048);
+  }
+
+  /** 패가 바닥패에 맞물려 붙을 때 리듬감 있는 "착! 착!" 2연타 */
+  private chakChak(t: number): void {
+    this.chakSnap(t, 0.9);
+    this.chakSnap(t + 0.082, 1.08);
+  }
+
+  /** 쪽 전용 "쪼~옥!" 입맞춤 효과음 (흡입 스윕 + 팝 스맥 + 경쾌한 포인트) */
+  private jjokKiss(t: number): void {
+    if (!this.ctx || !this.sfxGain || !this.noise) return;
+    // 1) "쪼~" 흡입 (고공명 밴드패스 노이즈 + 포먼트 상승)
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noise;
+    const bp = this.ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 7.5;
+    bp.frequency.setValueAtTime(920, t);
+    bp.frequency.exponentialRampToValueAtTime(2750, t + 0.095);
+    const ng = this.ctx.createGain();
+    ng.gain.setValueAtTime(0.001, t);
+    ng.gain.linearRampToValueAtTime(0.55, t + 0.045);
+    ng.gain.exponentialRampToValueAtTime(0.001, t + 0.105);
+    src.connect(bp); bp.connect(ng); ng.connect(this.sfxGain);
+    src.start(t); src.stop(t + 0.115);
+
+    const suck = this.ctx.createOscillator();
+    const sg = this.ctx.createGain();
+    suck.type = 'sine';
+    suck.frequency.setValueAtTime(480, t);
+    suck.frequency.exponentialRampToValueAtTime(1240, t + 0.092);
+    sg.gain.setValueAtTime(0.001, t);
+    sg.gain.linearRampToValueAtTime(0.28, t + 0.05);
+    sg.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    suck.connect(sg); sg.connect(this.sfxGain);
+    suck.start(t); suck.stop(t + 0.105);
+
+    // 2) "옥!" 입술 떼는 찰진 팝 스맥
+    const popT = t + 0.096;
+    const pop = this.ctx.createOscillator();
+    const pg = this.ctx.createGain();
+    pop.type = 'sine';
+    pop.frequency.setValueAtTime(1850, popT);
+    pop.frequency.exponentialRampToValueAtTime(520, popT + 0.045);
+    pg.gain.setValueAtTime(0.68, popT);
+    pg.gain.exponentialRampToValueAtTime(0.0001, popT + 0.055);
+    pop.connect(pg); pg.connect(this.sfxGain);
+    pop.start(popT); pop.stop(popT + 0.06);
+
+    const smack = this.ctx.createBufferSource();
+    smack.buffer = this.noise;
+    const sbp = this.ctx.createBiquadFilter();
+    sbp.type = 'bandpass';
+    sbp.Q.value = 2.4;
+    sbp.frequency.setValueAtTime(3100, popT);
+    const smg = this.ctx.createGain();
+    smg.gain.setValueAtTime(0.65, popT);
+    smg.gain.exponentialRampToValueAtTime(0.0001, popT + 0.032);
+    smack.connect(sbp); sbp.connect(smg); smg.connect(this.sfxGain);
+    smack.start(popT); smack.stop(popT + 0.038);
+
+    // 3) 쪽 성공 경쾌한 2음 차임
+    this.chime(popT + 0.045, [880, 1318], 0.14);
   }
 
   /** 먹은 패를 내 쪽으로 쓱 쓸어 가져오는 소리 */
@@ -490,5 +632,24 @@ export class WuxiaAudioEngine {
     this.hit(t + 0.11, 1860, 0.036, 0.8);
     this.taiko(t + 0.14, 96, 0.38, 0.96);
     this.gong(t + 0.16, 0.75);
+  }
+
+  // ── v0.5.1 통합 별칭 ──
+  /** 쪽 "쪼~옥!" (playJjokKiss 별칭) */
+  playJjok(): void { this.playJjokKiss(); }
+
+  /** 패가 바닥패에 맞물려 붙을 때 "착! 착!" */
+  playCardAttach(): void {
+    const t = this.now();
+    if (t === null) return;
+    this.chakChak(t);
+  }
+
+  /** 팝업 열림 UI 클릭 */
+  playUiClick(): void {
+    const t = this.now();
+    if (t === null) return;
+    this.hit(t, 1500, 0.025, 0.45);
+    this.chime(t + 0.02, [988], 0.09);
   }
 }

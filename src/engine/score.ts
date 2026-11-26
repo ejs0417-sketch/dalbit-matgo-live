@@ -146,7 +146,7 @@ export interface SettlementInput {
   missionDone: boolean
   nagariMul: number
   pointValue: number
-  kind: 'stop' | 'chongtong' | 'triplePpuk'
+  kind: 'stop' | 'chongtong' | 'triplePpuk' | 'forfeit'
   winner: Seat
 }
 
@@ -165,8 +165,10 @@ export function settle(input: SettlementInput): Settlement {
 
   let base = input.kind === 'chongtong' ? 10 : winBreak.total
   if (input.kind === 'triplePpuk') base = Math.max(base, 7)
+  // v0.5.1 기권: 한게임 기준 max(7, 이긴 쪽 현재 점수) × 점당, 배수 없음
+  if (input.kind === 'forfeit') base = Math.max(7, winBreak.total)
 
-  const goCount = input.kind === 'chongtong' ? 0 : input.goCount[winner]
+  const goCount = input.kind === 'chongtong' || input.kind === 'forfeit' ? 0 : input.goCount[winner]
   const goBonus = goCount
   const subtotal = base + goBonus
 
@@ -175,7 +177,7 @@ export function settle(input: SettlementInput): Settlement {
     if (mul > 1) factors.push({ id, label, mul })
   }
 
-  if (input.kind !== 'chongtong') {
+  if (input.kind !== 'chongtong' && input.kind !== 'forfeit') {
     const gMul = goMultiplier(goCount)
     push('go', goCount >= 3 ? `${goCount}고` : '고', gMul)
     const shakeMul = input.shakeCount > 0 ? 2 ** input.shakeCount : 1
@@ -193,7 +195,7 @@ export function settle(input: SettlementInput): Settlement {
     push('gobak', '고박', gobak)
     push('triple', '삼연뻑', input.kind === 'triplePpuk' ? 2 : 1)
   }
-  push('nagari', input.nagariMul >= 4 ? `나가리 ×${input.nagariMul}` : '나가리', input.nagariMul)
+  if (input.kind !== 'forfeit') push('nagari', input.nagariMul >= 4 ? `나가리 ×${input.nagariMul}` : '나가리', input.nagariMul)
 
   const totalMul = factors.reduce((acc, f) => acc * f.mul, 1)
   const points = subtotal * totalMul

@@ -41,15 +41,36 @@ class AudioFacade {
   }
 
   /** v0.5 실물 화투 물리 SFX */
-  physics(kind: 'slap' | 'clack' | 'sweep' | 'steal' | 'ppukStack' | 'bombTriple') {
+  physics(kind: 'slap' | 'clack' | 'attach' | 'sweep' | 'steal' | 'ppukStack' | 'bombTriple') {
     if (!this.sfxOn) return
     const e = this.engine
     if (kind === 'slap') e.playCardSlap()
     else if (kind === 'clack') e.playCardClack()
+    else if (kind === 'attach') e.playCardAttach()
     else if (kind === 'sweep') e.playCaptureSweep()
     else if (kind === 'steal') e.playStealPi()
     else if (kind === 'ppukStack') e.playPpukStack()
     else e.playBombTripleSlam()
+  }
+
+  /** v0.5.1 쪽 "쪼옥!" */
+  jjok() {
+    if (this.sfxOn) this.engine.playJjok()
+  }
+
+  /** v0.5.1 점수 상승 (점수가 오를수록 반음씩 상승, 상대는 낮은 톤) */
+  scoreUp(newScore: number, isMe: boolean) {
+    if (this.sfxOn) this.engine.playScoreUp(newScore, isMe)
+  }
+
+  /** v0.5.1 중간 기권 징 */
+  surrender() {
+    if (this.sfxOn) this.engine.playSurrender()
+  }
+
+  /** v0.5.1 팝업 열림 클릭 */
+  uiClick() {
+    if (this.sfxOn) this.engine.playUiClick()
   }
 
   setScene(scene: BgmScene) {

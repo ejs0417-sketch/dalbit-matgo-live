@@ -68,6 +68,7 @@ export interface RoomSummary {
 export interface Showdown {
   nagari: boolean
   forfeit: boolean
+  forfeitBy?: 0 | 1
   title: string
   subtitle: string
   winner?: Seat
