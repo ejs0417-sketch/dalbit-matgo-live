@@ -649,24 +649,38 @@ export function Table({
     }
   }, [])
 
-  // v0.5.3 바닥 카드 폭은 12칸 고정 그리드·컨테이너 크기만 보고 정한다 (장수 변동으로 출렁이지 않음)
+  // v0.5.3 바닥 카드 폭은 라운드+뷰포트 동안 잠근다. 먹은 패·점수 영역이 늘어나도 --cw가 다시 계산되며 슬롯이 1px도 흔들리지 않게.
+  const floorCwLock = useRef<{ games: number; viewport: string; cw: number | null }>({ games: -1, viewport: '', cw: null })
   useLayoutEffect(() => {
     const el = floorRef.current
     if (!el) return
-    const run = () => {
+    const viewportKey = () => `${window.innerWidth}x${window.innerHeight}`
+    const measure = (unlock = false) => {
       const row = el.parentElement
       const H = (row?.clientHeight ?? el.clientHeight) - 8
       const W = el.clientWidth - 8
+      if (W < 40 || H < 30) return
+      const vp = viewportKey()
+      if (!unlock && floorCwLock.current.games === room.games && floorCwLock.current.viewport === vp && floorCwLock.current.cw != null) {
+        setFloorCw((old) => (old === floorCwLock.current.cw ? old : floorCwLock.current.cw))
+        return
+      }
       const max = Math.max(30, Math.min(64, Math.floor((window.innerHeight || 400) * 0.14)))
       const cw = fitFixedSlotWidth(W, H, max)
+      floorCwLock.current = { games: room.games, viewport: vp, cw }
       setFloorCw((old) => (old === cw ? old : cw))
     }
-    run()
-    const ro = new ResizeObserver(run)
+    measure(true)
+    const onResize = () => measure(true)
+    window.addEventListener('resize', onResize)
+    const ro = new ResizeObserver(() => measure(false))
     ro.observe(el)
     if (el.parentElement) ro.observe(el.parentElement)
-    return () => ro.disconnect()
-  }, [])
+    return () => {
+      window.removeEventListener('resize', onResize)
+      ro.disconnect()
+    }
+  }, [room.games])
 
   return (
     <div ref={stageRef} className={`stage v05-mat${aura}`}>
