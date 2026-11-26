@@ -117,6 +117,8 @@ img { max-width: 100%; }
 .cast b, .cast span { display: block; font-size: 12px; }
 .cast span { color: #e6d3b0; font-weight: 400; }
 .bets, .rulesel, .actions, .join { display: flex; flex-wrap: wrap; gap: 8px; }
+.bet-block { display: grid; gap: 6px; min-width: 0; }
+.bet-label { margin: 0; color: #f0d48a; font-size: 13px; font-weight: 800; }
 .join { align-items: center; }
 .roomlist { margin-top: 22px; }
 .roomlist ul { list-style: none; padding: 0; display: grid; gap: 8px; }
@@ -629,7 +631,9 @@ body.calm *, body.calm *::before, body.calm *::after {
   .cast b { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cast span { display: none; }
   .bets, .rulesel { display: grid; gap: 4px; }
-  .bets { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .bet-block { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .bet-label { flex: none; font-size: 12px; }
+  .bets { flex: 1; min-width: 0; grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .rulesel { grid-template-columns: 1fr 1fr; }
   .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   .actions button:first-child { grid-column: 1 / -1; }
@@ -637,12 +641,14 @@ body.calm *, body.calm *::before, body.calm *::after {
   .lobby-right .join button,
   .bets button,
   .rulesel button {
+    min-width: 0;
     min-height: 32px;
     height: 34px;
     box-shadow: none;
-    padding: 0 6px;
+    padding: 0 2px;
     font-size: 13px;
     white-space: nowrap;
+    overflow: hidden;
   }
   .join { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; }
   .join button { height: 32px; }
@@ -732,25 +738,46 @@ body.calm *, body.calm *::before, body.calm *::after {
   .stage .hand.opp { height: 20px; }
   .stage .hand.opp .hwatu { width: 14px; height: 20px; margin-left: -6px; }
   .stage .middle {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-    align-content: stretch;
-    justify-items: stretch;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
     gap: 4px;
+    min-height: 0;
     overflow: hidden;
   }
   .stage .mission, .stage .timer, .stage .reconnect {
+    flex: none;
     min-width: 0;
     max-width: 100%;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
     margin: 0;
-    font-size: 11px;
-    padding: 2px 8px;
+    font-size: 12px;
+    line-height: 1;
+    padding: 0 10px;
+  }
+  .stage .timer, .stage .reconnect { height: 22px; }
+  .stage .mission {
+    height: 26px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    align-self: center;
+    width: min(100%, 520px);
+  }
+  .stage .mission em, .stage .mission i { flex: none; font-style: normal; }
+  .stage .mission b {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 800;
   }
   .stage .mission span { display: none; }
   .stage .center-row {
+    flex: 1 1 auto;
     min-height: 0;
     display: grid;
     grid-template-columns: 40px minmax(0, 1fr);

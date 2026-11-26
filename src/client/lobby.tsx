@@ -95,12 +95,15 @@ export function Lobby({
           </div>
         </div>
         <div className="lobby-card lobby-right">
-          <div className="bets" role="radiogroup" aria-label="점당 금액">
-            {BETS.map((b) => (
-              <button key={b.value} type="button" className={bet === b.value ? 'on' : ''} onClick={() => setBet(b.value)}>
-                점당 {b.label}
-              </button>
-            ))}
+          <div className="bet-block">
+            <p className="bet-label">점당</p>
+            <div className="bets" role="radiogroup" aria-label="점당 금액">
+              {BETS.map((b) => (
+                <button key={b.value} type="button" className={bet === b.value ? 'on' : ''} onClick={() => setBet(b.value)}>
+                  {b.label}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="rulesel">
             <button type="button" className={rule === 'night' ? 'on' : ''} onClick={() => setRule('night')}>첫 판 밤일낮</button>
