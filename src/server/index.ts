@@ -92,6 +92,7 @@ interface Room {
   clockSeat?: Seat
   clockLimit?: number
   awaitingReady?: boolean
+  armedAt?: number
   forfeitAt?: number
   notice?: string
 }
@@ -280,10 +281,32 @@ function actFor(room: Room, seat: Seat, timedOut: boolean) {
     if (!result.ok) break
     room.game = result.state
     if (room.game.phase === 'ended') applyPayout(room)
+    payInstant(room, result.events)
     pushRoom(room, result.events)
     room.notice = undefined
   }
   armTurn(room)
+}
+
+function payInstant(room: Room, events: GameEvent[]) {
+  for (const ev of events) {
+    if (ev.type !== 'firstPpuk' && ev.type !== 'doublePpuk') continue
+    const winner = ev.player
+    const loser = (1 - winner) as Seat
+    const due = ev.points * room.bet
+    const bank = seatMoney(room, loser)
+    const paid = Math.min(Math.max(0, bank), due)
+    setSeatMoney(room, loser, bank - paid)
+    setSeatMoney(room, winner, seatMoney(room, winner) + paid)
+  }
+}
+
+function releaseTurn(room: Room, who: Seat) {
+  if (!room.awaitingReady || !room.game || room.showdown || decider(room.game) !== who) return
+  room.awaitingReady = false
+  const slot = room.seats[who]
+  if (slot.ai || room.auto[who]) actFor(room, who, false)
+  else beginClock(room, who)
 }
 
 function beginClock(room: Room, seat: Seat) {
@@ -307,26 +330,15 @@ function armTurn(room: Room) {
   const who = decider(room.game)
   if (who === null) return
   const slot = room.seats[who]
-  if (slot.ai) {
-    room.aiTimer = setTimeout(() => actFor(room, who, false), 700 + Math.floor(Math.random() * 480))
-    pushSync(room)
-    return
-  }
-  if (!slot.connected) {
-    pushSync(room)
-    return
-  }
-  if (room.auto[who]) {
-    room.aiTimer = setTimeout(() => actFor(room, who, false), 520)
-    pushSync(room)
-    return
-  }
   room.awaitingReady = true
+  room.armedAt = Date.now()
   room.clockSeat = who
-  room.turnTimer = setTimeout(() => {
-    room.awaitingReady = false
-    beginClock(room, who)
-  }, 12_000)
+  if (!slot.connected && !slot.ai) {
+    pushSync(room)
+    return
+  }
+  const aiLike = slot.ai || room.auto[who]
+  room.turnTimer = setTimeout(() => releaseTurn(room, who), aiLike ? 1800 : 12_000)
   pushSync(room)
 }
 
@@ -616,6 +628,7 @@ function onAction(session: Session, action: Action) {
   }
   room.game = result.state
   if (room.game.phase === 'ended') applyPayout(room)
+  payInstant(room, result.events)
   pushRoom(room, result.events)
   armTurn(room)
 }
@@ -786,10 +799,13 @@ function onMessage(ws: WebSocket, raw: string) {
   }
   if (msg.type === 'ready_turn' && session.seat !== undefined) {
     const room = roomOf(session)
-    if (!room?.game || !room.awaitingReady || decider(room.game) !== session.seat) return
-    clearTurnTimers(room)
-    if (room.auto[session.seat]) room.aiTimer = setTimeout(() => actFor(room, session.seat!, false), 380)
-    else beginClock(room, session.seat)
+    const who = room?.game ? decider(room.game) : null
+    if (!room?.game || !room.awaitingReady || who === null) return
+    if (room.turnTimer) clearTimeout(room.turnTimer)
+    const aiLike = room.seats[who].ai || room.auto[who]
+    const elapsed = Date.now() - (room.armedAt ?? 0)
+    const wait = aiLike ? Math.max(0, 1800 - elapsed) : 0
+    room.turnTimer = setTimeout(() => releaseTurn(room, who), wait)
     return
   }
   if (msg.type === 'leave') {
@@ -818,6 +834,7 @@ async function main() {
     }
     app.use('/cards', express.static(path.join(dist, 'cards'), year))
     app.use('/assets', express.static(path.join(dist, 'assets'), year))
+    app.use('/art', express.static(path.join(dist, 'art'), year))
     app.use(express.static(dist))
     app.use((req, res, next) => {
       if (req.method !== 'GET' || req.path.startsWith('/api') || req.path.startsWith('/ws')) return next()

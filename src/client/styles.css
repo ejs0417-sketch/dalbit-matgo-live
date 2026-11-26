@@ -323,6 +323,9 @@ footer { width: min(1080px, calc(100% - 28px)); margin: 24px auto; }
 .ghost.from-you { animation-name: from-you; }
 .ghost.from-opp { animation-name: from-opp; }
 .ghost.from-deck { animation-name: from-deck; }
+.impact, .impact *, .shock, .ghost, .coins, .sunburst, .coin-rain, .slash, .bagua, .godori-fly, .spark, .aura-ring, .seal-mark {
+  pointer-events: none;
+}
 .impact {
   position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; pointer-events: none;
   background: radial-gradient(circle, rgba(0,0,0,.05), rgba(0,0,0,.55));
@@ -493,7 +496,11 @@ button.auto.on { background: #e6c15a; color: #2a160f; }
 .stage .floor .pip, .stage .floor .ssang {
   width: 16px; height: 16px; min-width: 16px; padding: 0; justify-content: center; font-size: 11px;
 }
-.stage .captures { display: none; }
+.stage .captures { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); max-height: 48px; overflow: hidden; }
+.stage .captures .pile div { min-height: 0; }
+.stage .captures .hwatu { width: 16px; height: 24px; margin-left: -8px; }
+.warn { display: inline-block; margin-top: 2px; padding: 1px 6px; border-radius: 999px; background: #8d1d28; color: #fff; font-size: 10px; font-weight: 800; animation: pulse 1s ease-in-out infinite; }
+.warn.gold { background: #8a6410; color: #fff6c2; }
 .badges {
   display: flex;
   flex-wrap: wrap;
@@ -883,3 +890,51 @@ body.calm *, body.calm *::before, body.calm *::after {
   .you-bar { flex-direction: column; align-items: stretch; }
   .soundbar input { width: 48px; }
 }
+
+.sunburst {
+  position: absolute; inset: -20%;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 214, 90, .0) 0 8deg, rgba(255, 214, 90, .45) 8deg 12deg);
+  animation: spin 6s linear infinite;
+}
+.coin-rain i {
+  position: absolute; top: -10%; left: calc(var(--i) * 5.5%);
+  width: 14px; height: 14px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff4c4, #e6b325 46%, #a87510);
+  animation: fall 1.1s linear infinite;
+  animation-delay: calc(var(--i) * 0.06s);
+}
+.slash { position: absolute; width: 140%; height: 18px; transform: rotate(-28deg); }
+.slash-slash, .slash-flame { background: linear-gradient(90deg, transparent, #fff 20%, #ffb15a 50%, transparent); box-shadow: 0 0 24px #ff5a2a; }
+.slash-frost { background: linear-gradient(90deg, transparent, #e8fbff 20%, #7ec8ff 50%, transparent); box-shadow: 0 0 24px #7ec8ff; }
+.slash-wind { background: linear-gradient(90deg, transparent, #e7ffe4 20%, #37b85a 50%, transparent); }
+.bagua {
+  position: absolute; width: min(70vw, 420px); height: min(70vw, 420px); border-radius: 50%;
+  border: 8px solid rgba(255, 210, 90, .8);
+  box-shadow: inset 0 0 0 18px rgba(180, 30, 30, .35), 0 0 40px rgba(255, 180, 40, .6);
+  animation: pop .4s ease both;
+}
+.godori-fly { position: absolute; inset: 18% 8% auto; display: flex; gap: 18px; justify-content: center; }
+.godori-fly b { font-family: "Song Myung", serif; font-size: 64px; color: #ffe08a; animation: pop .25s ease both; }
+.godori-fly b:nth-child(2) { animation-delay: .25s; }
+.godori-fly b:nth-child(3) { animation-delay: .5s; }
+.godori-fly .bird {
+  position: absolute; top: 70px; width: 36px; height: 14px; border-radius: 40% 60%;
+  background: #f0d48a; animation: fly 1.1s linear both;
+}
+.godori-fly .bird:nth-of-type(1) { left: 10%; animation-delay: .1s; }
+.godori-fly .bird:nth-of-type(2) { left: 40%; animation-delay: .25s; }
+.godori-fly .bird:nth-of-type(3) { left: 68%; animation-delay: .4s; }
+.seal-mark {
+  display: grid; place-items: center; width: 54px; height: 54px; margin: 8px auto 0;
+  border: 3px solid #c81d25; color: #c81d25; border-radius: 8px; font-family: "Song Myung", serif;
+  transform: rotate(-8deg); animation: pop .2s ease .15s both;
+}
+.fx-frost .seal-mark { border-color: #7ec8ff; color: #d7f3ff; }
+.fx-flame .seal-mark, .theme-red .seal-mark { border-color: #ff5a2a; color: #ffd0c2; }
+.bill li.stamp { animation: pop .25s ease both; }
+.bill li.bak-pi { box-shadow: 0 0 0 2px #ff5a5a; }
+.bill li.bak-gwang { box-shadow: 0 0 0 2px #ffe08a; }
+.bill li.bak-gobak, .bill li.bak-go { box-shadow: 0 0 0 2px #b48cff; }
+.bill li.bak-meong { box-shadow: 0 0 0 2px #8a8aa0; }
+@keyframes spin { to { transform: rotate(1turn); } }
+@keyframes fly { to { transform: translateX(46vw); opacity: 0; } }

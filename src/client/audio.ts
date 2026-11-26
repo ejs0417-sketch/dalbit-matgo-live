@@ -226,7 +226,30 @@ class AudioEngine {
     else if (name === 'nagari') this.chime(t, [440, 370, 294], 0.28)
     else if (name === 'chongtong') this.chime(t, [262, 392, 523, 784, 1046], 0.2)
     else if (name === 'tick') this.hit(t, 880, 0.05, 0.28)
-    else if (name === 'stamp') this.hit(t, 110, 0.09, 0.55)
+    else if (name === 'stamp' || name === 'seal') {
+      this.hit(t, 90, 0.12, 0.7)
+      this.hit(t + 0.04, 180, 0.08, 0.4)
+    }
+    else if (name === 'slash') {
+      this.hit(t, 1400, 0.08, 0.35)
+      this.hit(t + 0.02, 420, 0.1, 0.4)
+    }
+    else if (name === 'flame') this.chime(t, [220, 330, 494, 740], 0.22)
+    else if (name === 'frost') this.chime(t, [880, 1175, 1568, 2093], 0.2)
+    else if (name === 'wind') this.chime(t, [392, 523, 784, 1046], 0.18)
+    else if (name === 'bagua') {
+      this.hit(t, 55, 0.32, 0.9)
+      this.chime(t + 0.04, [196, 294, 392], 0.24)
+    }
+    else if (name === 'birds') {
+      this.chime(t, [988, 1318, 1760], 0.16)
+      this.hit(t + 0.25, 1568, 0.05, 0.3)
+      this.hit(t + 0.5, 1976, 0.05, 0.3)
+    }
+    else if (name === 'jackpot') {
+      this.chime(t, [523, 659, 784, 1046, 1318, 1568], 0.28)
+      for (let i = 0; i < 8; i++) this.hit(t + i * 0.045, 1200 + i * 90, 0.03, 0.22)
+    }
   }
 
   private thud(time: number) {

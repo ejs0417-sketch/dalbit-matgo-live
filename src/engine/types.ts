@@ -120,6 +120,8 @@ export interface GameState {
   chongtongQueue: Seat[]
   pending?: PendingChoice
   consecutivePpuk: number
+  ppukStreak: [number, number]
+  turnsPlayed: [number, number]
   nagariMul: number
   pointValue: number
   mission: Mission
@@ -159,6 +161,8 @@ export type GameEvent =
   | { type: 'drop'; player: Seat; cardId: string }
   | { type: 'jjok'; player: Seat }
   | { type: 'ppuk'; player: Seat; month: number; combo: number }
+  | { type: 'firstPpuk'; player: Seat; points: 7 }
+  | { type: 'doublePpuk'; player: Seat; points: 14 }
   | { type: 'ownPpuk'; player: Seat; month: number }
   | { type: 'eatPpuk'; player: Seat; month: number }
   | { type: 'ttadak'; player: Seat }

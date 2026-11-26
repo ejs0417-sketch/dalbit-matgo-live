@@ -278,6 +278,24 @@ describe('진행 규칙', () => {
     expect(cur.state.end?.settlement?.points).toBe(14)
   })
 
+  it('첫 턴 뻑은 7점, 같은 사람의 2연속 뻑은 14점 즉금 이벤트다', () => {
+    const state = sandbox()
+    state.floor = ['m01-pi1', 'm04-pi1', 'm08-pi1']
+    state.players[0].hand = ['m01-pi2', 'm04-pi2', 'm09-pi1']
+    state.players[1].hand = ['m07-pi1', 'm05-pi1']
+    state.deck = ['m01-tti', 'm06-pi1', 'm04-tti', 'm09-pi2']
+    const first = play(state, 0, 'm01-pi2')
+    expect(first.events.some((e) => e.type === 'firstPpuk' && e.points === 7)).toBe(true)
+    expect(first.state.ppukStreak[0]).toBe(1)
+    expect(first.state.turnsPlayed[0]).toBe(1)
+    const gap = play(first.state, 1, 'm07-pi1')
+    expect(gap.events.some((e) => e.type === 'ppuk')).toBe(false)
+    const second = play(gap.state, 0, 'm04-pi2')
+    expect(second.events.some((e) => e.type === 'doublePpuk' && e.points === 14)).toBe(true)
+    expect(second.state.ppukStreak[0]).toBe(2)
+    expect(second.events.some((e) => e.type === 'triple')).toBe(false)
+  })
+
   it('따닥은 네 장을 가져가고 피를 뺏으며, 뒤집힌 패가 다르면 고른 패만 가져간다', () => {
     const tt = sandbox()
     tt.floor = ['m06-pi1', 'm06-pi2', 'm08-pi1']

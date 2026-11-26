@@ -116,12 +116,16 @@ function Bill({
   const stamped = useRef(-1)
   useEffect(() => {
     if (step <= stamped.current) return
-    if (step >= 2 && step < 2 + showdown.factors.length) audio.play('stamp')
+    if (step >= 2 && step < 2 + showdown.factors.length) {
+      audio.play('seal')
+      audio.play('coin')
+    }
+    if (step === showdown.factors.length + 2) audio.play('jackpot')
     stamped.current = step
   }, [step, showdown.factors.length])
   useEffect(() => {
     audio.play(showdown.nagari ? 'nagari' : showdown.winner === you ? 'win' : 'lose')
-    const timer = window.setInterval(() => setStep((s) => s + 1), 480)
+    const timer = window.setInterval(() => setStep((s) => s + 1), 350)
     return () => window.clearInterval(timer)
   }, [showdown, you])
   const goOn = step >= 1
@@ -151,7 +155,7 @@ function Bill({
           <li className={step >= 0 ? 'on' : ''}>기본 점수 <b>{showdown.base}점</b></li>
           {showdown.goBonus > 0 && <li className={goOn ? 'on' : ''}>고 보너스 <b>+{showdown.goBonus}</b></li>}
           {showdown.factors.map((factor, index) => (
-            <li key={factor.id} className={step >= index + 2 ? 'on' : ''}>{factor.label} <b>×{factor.mul}</b></li>
+            <li key={factor.id} className={`${step >= index + 2 ? 'on stamp' : ''} bak-${factor.id}`}>{factor.label} <b>×{factor.mul}</b></li>
           ))}
           <li className={moneyOn ? 'on' : ''}>점수 <b>{points}점</b></li>
           <li className={moneyOn ? 'on' : ''}>받은 돈 <b>{won(counted)}원</b></li>
@@ -310,7 +314,13 @@ export function Table({
 
   const you = room.seats.find((s) => s.seat === view.you)
   const opp = room.seats.find((s) => s.seat !== view.you)
-  const yourTurn = ready && view.decider === view.you && !packet.showdown
+  const [forced, setForced] = useState(false)
+  useEffect(() => {
+    setForced(false)
+    const timer = window.setTimeout(() => setForced(true), 2200)
+    return () => window.clearTimeout(timer)
+  }, [packet.id])
+  const yourTurn = (ready || forced) && view.decider === view.you && !packet.showdown
   const floorMonths = new Set(view.floor.map((id) => CARDS[id]?.month ?? 0).filter((month) => month > 0))
   const ppukMonths = new Set(view.ppuks.map((p) => p.month))
   const playable = new Set(view.legal.flatMap((a) => (a.type === 'play' ? [a.cardId] : [])))
@@ -487,6 +497,8 @@ export function Table({
                 </div>
                 {bubble?.who === view.you && <p className="bubble">{bubble.text}</p>}
               </div>
+              {(view.youScore.piCount > 0 && view.youScore.piCount <= 7 && view.oppScore.total >= 7) && <em className="warn">피박 주의</em>}
+              {(view.oppScore.gwangCount >= 3 && view.youScore.gwangCount === 0) && <em className="warn gold">광박 주의</em>}
               <button type="button" className="badges" onClick={() => setOpenPile(openPile === 'you' ? null : 'you')}>
                 <span>광 {groups(view.yourCapture).gwang.length}</span>
                 <span>열 {groups(view.yourCapture).yeol.length}</span>

@@ -28663,6 +28663,8 @@ function sandbox(seed = 1) {
     phase: "turn",
     chongtongQueue: [],
     consecutivePpuk: 0,
+    ppukStreak: [0, 0],
+    turnsPlayed: [0, 0],
     nagariMul: 1,
     pointValue: 1e3,
     mission: rollMission(makeRng(seed).next),
@@ -28927,8 +28929,12 @@ function makePpuk(state, seat, cards, month, events) {
   state.floor.push(...cards);
   state.ppuks.push({ month, owner: seat, cards });
   state.consecutivePpuk += 1;
+  state.ppukStreak[seat] += 1;
   events.push({ type: "ppuk", player: seat, month, combo: state.consecutivePpuk });
-  if (state.consecutivePpuk >= 3) {
+  if (state.turnsPlayed[seat] === 0) events.push({ type: "firstPpuk", player: seat, points: 7 });
+  const triple = state.consecutivePpuk >= 3 || state.ppukStreak[seat] >= 3;
+  if (!triple && state.ppukStreak[seat] === 2) events.push({ type: "doublePpuk", player: seat, points: 14 });
+  if (triple) {
     events.push({ type: "triple", player: seat });
     endGame(state, seat, "triplePpuk", events);
     return true;
@@ -28983,7 +28989,11 @@ function resolvePlay(state, seat, playedId, chosen, events) {
     }
   }
   if (state.phase === "ended") return;
-  if (!madePpuk) state.consecutivePpuk = 0;
+  if (!madePpuk) {
+    state.consecutivePpuk = 0;
+    state.ppukStreak[seat] = 0;
+  }
+  state.turnsPlayed[seat] += 1;
   maybeSweep(state, seat, events);
 }
 function scoreOf(state, seat) {
@@ -29113,6 +29123,8 @@ function playToken(state, seat, id, events) {
   me.hand = me.hand.filter((c) => c !== id);
   events.push({ type: "token", player: seat });
   state.consecutivePpuk = 0;
+  state.ppukStreak[seat] = 0;
+  state.turnsPlayed[seat] += 1;
   const flip = nextFlip(state, seat, events);
   if (flip && state.phase !== "ended") processIndependent(state, seat, flip, events);
   if (state.phase === "ended") return;
@@ -29133,6 +29145,8 @@ function doBomb(state, seat, month, events) {
   });
   me.hand.push(...tokens);
   state.consecutivePpuk = 0;
+  state.ppukStreak[seat] = 0;
+  state.turnsPlayed[seat] += 1;
   events.push({ type: "bomb", player: seat, month, cardIds: [...use, ...floorIds] });
   addCards(state, seat, [...use, ...floorIds], events, "bomb");
   doSteal(state, seat, 1, events);
@@ -29634,10 +29648,30 @@ function actFor(room, seat, timedOut) {
     if (!result.ok) break;
     room.game = result.state;
     if (room.game.phase === "ended") applyPayout(room);
+    payInstant(room, result.events);
     pushRoom(room, result.events);
     room.notice = void 0;
   }
   armTurn(room);
+}
+function payInstant(room, events) {
+  for (const ev of events) {
+    if (ev.type !== "firstPpuk" && ev.type !== "doublePpuk") continue;
+    const winner = ev.player;
+    const loser = 1 - winner;
+    const due = ev.points * room.bet;
+    const bank = seatMoney(room, loser);
+    const paid = Math.min(Math.max(0, bank), due);
+    setSeatMoney(room, loser, bank - paid);
+    setSeatMoney(room, winner, seatMoney(room, winner) + paid);
+  }
+}
+function releaseTurn(room, who) {
+  if (!room.awaitingReady || !room.game || room.showdown || decider(room.game) !== who) return;
+  room.awaitingReady = false;
+  const slot = room.seats[who];
+  if (slot.ai || room.auto[who]) actFor(room, who, false);
+  else beginClock(room, who);
 }
 function beginClock(room, seat) {
   if (!room.game || room.showdown || decider(room.game) !== seat) return;
@@ -29659,26 +29693,15 @@ function armTurn(room) {
   const who = decider(room.game);
   if (who === null) return;
   const slot = room.seats[who];
-  if (slot.ai) {
-    room.aiTimer = setTimeout(() => actFor(room, who, false), 700 + Math.floor(Math.random() * 480));
-    pushSync(room);
-    return;
-  }
-  if (!slot.connected) {
-    pushSync(room);
-    return;
-  }
-  if (room.auto[who]) {
-    room.aiTimer = setTimeout(() => actFor(room, who, false), 520);
-    pushSync(room);
-    return;
-  }
   room.awaitingReady = true;
+  room.armedAt = Date.now();
   room.clockSeat = who;
-  room.turnTimer = setTimeout(() => {
-    room.awaitingReady = false;
-    beginClock(room, who);
-  }, 12e3);
+  if (!slot.connected && !slot.ai) {
+    pushSync(room);
+    return;
+  }
+  const aiLike = slot.ai || room.auto[who];
+  room.turnTimer = setTimeout(() => releaseTurn(room, who), aiLike ? 1800 : 12e3);
   pushSync(room);
 }
 function titleFor(kind) {
@@ -29955,6 +29978,7 @@ function onAction(session, action) {
   }
   room.game = result.state;
   if (room.game.phase === "ended") applyPayout(room);
+  payInstant(room, result.events);
   pushRoom(room, result.events);
   armTurn(room);
 }
@@ -30122,10 +30146,13 @@ function onMessage(ws, raw) {
   }
   if (msg.type === "ready_turn" && session.seat !== void 0) {
     const room = roomOf(session);
-    if (!room?.game || !room.awaitingReady || decider(room.game) !== session.seat) return;
-    clearTurnTimers(room);
-    if (room.auto[session.seat]) room.aiTimer = setTimeout(() => actFor(room, session.seat, false), 380);
-    else beginClock(room, session.seat);
+    const who = room?.game ? decider(room.game) : null;
+    if (!room?.game || !room.awaitingReady || who === null) return;
+    if (room.turnTimer) clearTimeout(room.turnTimer);
+    const aiLike = room.seats[who].ai || room.auto[who];
+    const elapsed = Date.now() - (room.armedAt ?? 0);
+    const wait = aiLike ? Math.max(0, 1800 - elapsed) : 0;
+    room.turnTimer = setTimeout(() => releaseTurn(room, who), wait);
     return;
   }
   if (msg.type === "leave") {
@@ -30152,6 +30179,7 @@ async function main() {
     };
     app.use("/cards", import_express.default.static(import_node_path.default.join(dist, "cards"), year));
     app.use("/assets", import_express.default.static(import_node_path.default.join(dist, "assets"), year));
+    app.use("/art", import_express.default.static(import_node_path.default.join(dist, "art"), year));
     app.use(import_express.default.static(dist));
     app.use((req, res, next) => {
       if (req.method !== "GET" || req.path.startsWith("/api") || req.path.startsWith("/ws")) return next();

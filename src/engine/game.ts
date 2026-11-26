@@ -47,6 +47,8 @@ export function sandbox(seed = 1): GameState {
     phase: 'turn',
     chongtongQueue: [],
     consecutivePpuk: 0,
+    ppukStreak: [0, 0],
+    turnsPlayed: [0, 0],
     nagariMul: 1,
     pointValue: 1000,
     mission: rollMission(makeRng(seed).next),
@@ -333,8 +335,12 @@ function makePpuk(state: GameState, seat: Seat, cards: string[], month: number, 
   state.floor.push(...cards)
   state.ppuks.push({ month, owner: seat, cards })
   state.consecutivePpuk += 1
+  state.ppukStreak[seat] += 1
   events.push({ type: 'ppuk', player: seat, month, combo: state.consecutivePpuk })
-  if (state.consecutivePpuk >= 3) {
+  if (state.turnsPlayed[seat] === 0) events.push({ type: 'firstPpuk', player: seat, points: 7 })
+  const triple = state.consecutivePpuk >= 3 || state.ppukStreak[seat] >= 3
+  if (!triple && state.ppukStreak[seat] === 2) events.push({ type: 'doublePpuk', player: seat, points: 14 })
+  if (triple) {
     events.push({ type: 'triple', player: seat })
     endGame(state, seat, 'triplePpuk', events)
     return true
@@ -392,7 +398,11 @@ function resolvePlay(state: GameState, seat: Seat, playedId: string, chosen: str
   }
 
   if (state.phase === 'ended') return
-  if (!madePpuk) state.consecutivePpuk = 0
+  if (!madePpuk) {
+    state.consecutivePpuk = 0
+    state.ppukStreak[seat] = 0
+  }
+  state.turnsPlayed[seat] += 1
   maybeSweep(state, seat, events)
 }
 
@@ -534,6 +544,8 @@ function playToken(state: GameState, seat: Seat, id: string, events: GameEvent[]
   me.hand = me.hand.filter((c) => c !== id)
   events.push({ type: 'token', player: seat })
   state.consecutivePpuk = 0
+  state.ppukStreak[seat] = 0
+  state.turnsPlayed[seat] += 1
   const flip = nextFlip(state, seat, events)
   if (flip && state.phase !== 'ended') processIndependent(state, seat, flip, events)
   if (state.phase === 'ended') return
@@ -555,6 +567,8 @@ function doBomb(state: GameState, seat: Seat, month: number, events: GameEvent[]
   })
   me.hand.push(...tokens)
   state.consecutivePpuk = 0
+  state.ppukStreak[seat] = 0
+  state.turnsPlayed[seat] += 1
   events.push({ type: 'bomb', player: seat, month, cardIds: [...use, ...floorIds] })
   addCards(state, seat, [...use, ...floorIds], events, 'bomb')
   doSteal(state, seat, 1, events)
