@@ -805,12 +805,12 @@ body.calm *, body.calm *::before, body.calm *::after {
   }
   .stage .mission span { display: none; }
   .stage .center-row {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     min-height: 0;
     display: grid;
     grid-template-columns: 40px minmax(0, 1fr);
     gap: 6px;
-    align-items: center;
+    align-items: start;
     overflow: hidden;
   }
   .stage .deck { width: 40px; height: 58px; }

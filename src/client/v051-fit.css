@@ -70,7 +70,7 @@
   .stage .middle { gap: 2px !important; }
   .stage .mission { height: 18px !important; font-size: 10.5px !important; padding: 0 8px !important; }
   .stage .timer, .stage .reconnect { height: 16px !important; font-size: 10px !important; }
-  .stage .center-row { grid-template-columns: 34px minmax(0, 1fr) !important; gap: 4px !important; }
+  .stage .center-row { flex: 0 0 auto !important; grid-template-columns: 34px minmax(0, 1fr) !important; gap: 4px !important; align-items: start !important; }
   .stage.v05-mat .deck, .stage.v05-mat .deck .hwatu { width: 32px !important; height: 50px !important; }
   .stage.v05-mat .deck span { font-size: 10px; }
   .stage.v05-mat .floor, .stage.v05-mat .floor[data-dense] {
@@ -160,7 +160,7 @@
   .stage .mission { flex: none; height: 22px !important; display: flex !important; align-items: center; gap: 6px; font-size: 11px !important; padding: 0 8px !important; white-space: nowrap; overflow: hidden; align-self: center; max-width: 100%; }
   .stage .mission span { display: none !important; }
   .stage .timer { flex: none; height: 18px !important; font-size: 10px !important; }
-  .stage .center-row { flex: 1 1 auto !important; min-height: 0 !important; display: grid !important; grid-template-columns: 40px minmax(0, 1fr) !important; gap: 6px !important; align-items: center !important; overflow: hidden; }
+  .stage .center-row { flex: 0 0 auto !important; min-height: 0 !important; display: grid !important; grid-template-columns: 40px minmax(0, 1fr) !important; gap: 6px !important; align-items: start !important; overflow: hidden; }
   .stage.v05-mat .deck, .stage.v05-mat .deck .hwatu { width: 38px !important; height: 60px !important; }
   .stage.v05-mat .floor, .stage.v05-mat .floor[data-dense] {
     display: grid !important;

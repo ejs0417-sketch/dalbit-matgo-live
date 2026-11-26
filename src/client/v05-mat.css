@@ -107,7 +107,7 @@
   height: calc(var(--cw) * 1.63 * 2 + max(4px, calc(var(--cw) * .12)) + 4px) !important;
   min-height: calc(var(--cw) * 1.63 * 2 + max(4px, calc(var(--cw) * .12)) + 4px) !important;
   max-height: calc(var(--cw) * 1.63 * 2 + max(4px, calc(var(--cw) * .12)) + 4px) !important;
-  align-self: center !important;
+  align-self: start !important;
 }
 .stage.v05-mat .floor .floor-slot,
 .stage.v05-mat .floor .pile {
@@ -332,4 +332,19 @@
     overflow: hidden;
   }
   .bill-body { overflow-x: hidden; }
+}
+
+/* v0.5.3 floor viewport pin: 미션/힌트/스페셜 등장으로 가운데 열이 줄어도 바닥 그리드 좌표가 안 움직임 */
+.stage.v05-mat .middle {
+  justify-content: start !important;
+  align-content: start !important;
+}
+.stage.v05-mat .center-row {
+  flex: 0 0 auto !important;
+  align-items: start !important;
+  align-self: start !important;
+}
+.stage.v05-mat .floor,
+.stage.v05-mat .floor.fixed-slots {
+  align-self: start !important;
 }
