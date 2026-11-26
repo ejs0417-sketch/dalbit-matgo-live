@@ -35,6 +35,26 @@ export interface RoomInfo {
   disconnectedSeat?: Seat | null
   notice?: string | null
   serverNow?: number
+  seonDraw?: SeonDrawInfo | null
+}
+
+export interface SeonDrawInfo {
+  round: number
+  isDay: boolean
+  count: number
+  picks: [number | null, number | null]
+  deadlineAt: number
+  resolved: { seon: Seat; a: string; b: string } | null
+}
+
+export interface SeonReveal {
+  round: number
+  isDay: boolean
+  a: string
+  b: string
+  picks: [number | null, number | null]
+  seon: Seat | null
+  tie: boolean
 }
 
 export interface RoomSummary {

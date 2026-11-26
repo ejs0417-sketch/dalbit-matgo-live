@@ -1,0 +1,13 @@
+{
+  "name": "달빛맞고",
+  "short_name": "달빛맞고",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#12080c",
+  "theme_color": "#12080c",
+  "lang": "ko-KR",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

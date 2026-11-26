@@ -1,0 +1,493 @@
+/* 달빛맞고 : 강호무림 v0.4.1 — 무협 로비 · 대기실 · 낮일밤장 뽑기 · 상시 먹은 패 · 큰 점수 */
+:root {
+  --wx-ink: #090e0c;
+  --wx-gold: #f3c969;
+  --wx-gold-hi: #fff1c0;
+  --wx-cinnabar: #d93829;
+  --wx-jade: #1d6b56;
+  --wx-lacquer: linear-gradient(180deg, #2b1612 0%, #140a08 100%);
+}
+
+/* 화투패 위 텍스트 라벨 제거 */
+.hwatu .pip, .hwatu .card-label, .hwatu .month-tag { display: none !important; }
+
+/* ───────── 공통 배경 ───────── */
+.wx-lobby, .wx-wait, .wx-seon {
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+  overflow: hidden;
+  color: #fff6df;
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(5, 4, 6, 0) 28%, rgba(5, 4, 6, .78) 100%),
+    linear-gradient(180deg, rgba(5, 4, 6, .62) 0%, rgba(5, 4, 6, .08) 24%, rgba(5, 4, 6, .18) 58%, rgba(5, 4, 6, .9) 100%),
+    url('/art/lobby-bg.webp') center / cover no-repeat,
+    var(--wx-ink);
+  padding:
+    max(10px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
+}
+.wx-wait, .wx-seon {
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(5, 4, 6, .35) 20%, rgba(5, 4, 6, .9) 100%),
+    url('/art/lobby-bg.webp') center / cover no-repeat,
+    var(--wx-ink);
+}
+
+/* ───────── 로비 ───────── */
+.wx-lobby {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+.wx-hud {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(30, 14, 12, .82), rgba(8, 5, 5, .82));
+  border: 1px solid rgba(243, 201, 105, .55);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 236, 180, .2);
+}
+.wx-me {
+  display: flex; align-items: center; gap: 8px;
+  min-width: 0; flex: 0 1 auto;
+  border: 0; background: none; color: inherit; padding: 0; text-align: left;
+}
+.wx-avatar {
+  flex: none;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 35%, #3a2a1a, #120a08);
+  border: 2px solid var(--wx-gold);
+  box-shadow: 0 0 0 2px #3a1a08, 0 0 12px rgba(243, 201, 105, .45);
+}
+.wx-avatar .portrait { width: 120%; max-width: none; transform: translateY(8%); filter: none; }
+.wx-avatar.sm { width: 30px; height: 30px; }
+.wx-avatar.lg { width: clamp(56px, 16vh, 96px); height: clamp(56px, 16vh, 96px); }
+.wx-avatar.empty { color: var(--wx-gold); font: 900 28px "Black Han Sans", sans-serif; border-style: dashed; }
+.wx-me-text { display: grid; min-width: 0; line-height: 1.15; }
+.wx-me-text b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wx-coin {
+  font-style: normal; font-weight: 900; font-size: 13px; color: #ffd76a; white-space: nowrap;
+}
+.wx-coin::before {
+  content: ""; display: inline-block; width: 11px; height: 11px; margin-right: 4px; vertical-align: -1px;
+  border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff4c4, #f3c969 45%, #a8741e);
+  box-shadow: inset 0 0 0 2px rgba(120, 70, 10, .5);
+}
+.wx-charge {
+  flex: none; white-space: nowrap;
+  height: 28px; padding: 0 10px; border-radius: 999px;
+  border: 1px solid #ffe7a0; color: #2a1206; font-weight: 900; font-size: 12px;
+  background: linear-gradient(180deg, #fff1c0, #f3c969 55%, #c48a2a);
+  box-shadow: 0 3px 0 #7a4a10;
+}
+.wx-icons { margin-left: auto; display: flex; gap: 4px; flex: none; }
+.wx-icon {
+  width: 38px; height: 38px; border-radius: 12px;
+  display: grid; place-items: center; align-content: center; gap: 0;
+  border: 1px solid rgba(243, 201, 105, .5);
+  background: var(--wx-lacquer); color: var(--wx-gold);
+  box-shadow: 0 3px 0 #000, inset 0 1px 0 rgba(255, 236, 180, .18);
+  padding: 0;
+}
+.wx-icon small { font-size: 8px; font-weight: 800; line-height: 1; margin-top: 1px; }
+
+.wx-emblem { min-height: 0; display: grid; place-items: center; }
+.wx-emblem img {
+  max-width: min(100%, 600px);
+  max-height: 100%;
+  width: auto; height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, .7)) drop-shadow(0 0 24px rgba(243, 201, 105, .25));
+  animation: wx-float 5s ease-in-out infinite;
+}
+@keyframes wx-float { 50% { transform: translateY(-6px); } }
+
+.wx-controls {
+  width: min(100%, 460px);
+  justify-self: center;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.wx-chips { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.wx-chip-label { flex: none; font: 400 15px "Song Myung", serif; color: var(--wx-gold); padding-right: 2px; }
+.wx-chip {
+  flex: 1 1 0; min-width: 0; height: 34px; padding: 0 4px;
+  border-radius: 999px; white-space: nowrap; overflow: hidden;
+  font-weight: 900; font-size: 13px; color: #f6e7c2;
+  border: 1px solid rgba(243, 201, 105, .45);
+  background: linear-gradient(180deg, rgba(40, 20, 14, .9), rgba(10, 6, 5, .92));
+  box-shadow: 0 3px 0 #000;
+}
+.wx-chip.on {
+  color: #2a1206; border-color: #ffe7a0;
+  background: radial-gradient(circle at 50% 30%, #fff4c8, #f3c969 55%, #b98024);
+  box-shadow: 0 3px 0 #6b3d0c, 0 0 12px rgba(243, 201, 105, .55);
+}
+.wx-chip:disabled { opacity: .55; cursor: default; }
+.wx-chip.on:disabled { opacity: 1; }
+.wx-seg {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0; min-width: 0;
+  border-radius: 12px; overflow: hidden; border: 1px solid rgba(243, 201, 105, .45);
+  background: rgba(8, 5, 5, .75);
+}
+.wx-seg button {
+  height: 32px; border: 0; background: none; color: #d9c7aa; font-weight: 800; font-size: 12px;
+  white-space: nowrap; overflow: hidden; min-width: 0; padding: 0 6px;
+}
+.wx-seg button.on { color: #fff6df; background: linear-gradient(180deg, #7a1c18, #3a0c0a); box-shadow: inset 0 0 0 1px rgba(255, 180, 160, .35); }
+.wx-seg button:disabled { cursor: default; }
+.wx-buttons { display: grid; gap: 10px; }
+
+/* 입체 3D 무협 버튼 */
+.wx-btn3d {
+  --face: linear-gradient(180deg, #fff1c0 0%, #f3c969 42%, #c48a2a 100%);
+  --edge: #6b3d0c;
+  --txt: #2a1206;
+  position: relative;
+  height: 58px;
+  border-radius: 16px;
+  border: 2px solid rgba(255, 240, 190, .9);
+  background: var(--face);
+  color: var(--txt);
+  font: 400 24px/1 "Black Han Sans", "Noto Sans KR", sans-serif;
+  letter-spacing: .06em;
+  white-space: nowrap;
+  box-shadow: 0 6px 0 var(--edge), 0 10px 18px rgba(0, 0, 0, .55), inset 0 2px 0 rgba(255, 255, 255, .55), inset 0 -4px 0 rgba(0, 0, 0, .18);
+  transition: transform .08s ease, box-shadow .08s ease;
+  overflow: hidden;
+}
+.wx-btn3d::before {
+  content: ""; position: absolute; inset: 4px; border-radius: 11px; pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, .28);
+}
+.wx-btn3d::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .45), transparent);
+  animation: wx-shine 3.6s ease-in-out infinite;
+}
+.wx-btn3d span { position: relative; z-index: 1; text-shadow: 0 1px 0 rgba(255, 255, 255, .35); }
+.wx-btn3d:active:not(:disabled) { transform: translateY(5px); box-shadow: 0 1px 0 var(--edge), 0 4px 8px rgba(0, 0, 0, .5), inset 0 2px 0 rgba(255, 255, 255, .4); }
+.wx-btn3d:disabled { filter: grayscale(.6) brightness(.7); cursor: default; }
+.wx-btn3d.crimson { --face: linear-gradient(180deg, #ff8a74 0%, #d93829 45%, #7a1210 100%); --edge: #3e0806; --txt: #fff6df; border-color: rgba(255, 200, 180, .85); }
+.wx-btn3d.crimson span, .wx-btn3d.jade span { text-shadow: 0 2px 0 rgba(0, 0, 0, .45); }
+.wx-btn3d.jade { --face: linear-gradient(180deg, #6fd6b0 0%, #1d6b56 50%, #0b3a2e 100%); --edge: #04211a; --txt: #f3fff8; border-color: rgba(190, 255, 225, .75); }
+.wx-btn3d.small { height: 44px; font-size: 18px; }
+@keyframes wx-shine { 0%, 60% { left: -60%; } 100% { left: 130%; } }
+
+/* 팝업 모달 (옻칠) */
+.wx-modal {
+  position: fixed; inset: 0; z-index: 70;
+  display: grid; place-items: center;
+  background: rgba(0, 0, 0, .66);
+  padding: 12px;
+}
+.wx-sheet {
+  width: min(440px, 100%);
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  display: grid; gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--wx-lacquer);
+  border: 2px solid var(--wx-gold);
+  box-shadow: 0 0 0 4px #1a0a06, 0 20px 50px rgba(0, 0, 0, .7), inset 0 0 40px rgba(243, 201, 105, .08);
+}
+.wx-sheet header { display: flex; align-items: center; justify-content: space-between; }
+.wx-sheet h2 { margin: 0; font: 400 22px "Song Myung", serif; color: var(--wx-gold-hi); }
+.wx-close { width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(243, 201, 105, .5); background: #120806; color: var(--wx-gold); display: grid; place-items: center; }
+.wx-field { display: grid; gap: 4px; font-size: 12px; color: var(--wx-gold); }
+.wx-field input, .wx-join input {
+  height: 42px; border-radius: 12px; padding: 0 12px;
+  border: 1px solid rgba(243, 201, 105, .5); background: #0c0605; color: #fff; font-size: 16px; outline: none;
+}
+.wx-join input { letter-spacing: .3em; text-transform: uppercase; font-weight: 900; }
+.wx-cast { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.wx-cast button {
+  border-radius: 12px; border: 1px solid rgba(243, 201, 105, .3); background: rgba(255, 255, 255, .04);
+  color: #f6e7c2; padding: 4px 2px; display: grid; justify-items: center; gap: 2px; min-width: 0;
+}
+.wx-cast button.on { border-color: var(--wx-gold); background: rgba(243, 201, 105, .16); box-shadow: 0 0 10px rgba(243, 201, 105, .45); }
+.wx-cast .portrait { width: 46px; }
+.wx-cast b { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.wx-blurb { margin: 0; font-size: 12px; color: #e9d8b6; }
+.wx-join { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 8px; }
+.wx-rooms { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.wx-rooms li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px; border-radius: 12px; background: rgba(255, 255, 255, .04); }
+.wx-rooms li div { display: grid; min-width: 0; }
+.wx-rooms small { color: #d9c7aa; font-size: 11px; }
+.wx-rooms .wx-chip { flex: none; padding: 0 10px; height: 30px; }
+
+@media (orientation: landscape) and (max-height: 560px) {
+  .wx-lobby {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 8px 14px;
+    padding-top: max(6px, env(safe-area-inset-top));
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .wx-hud { grid-column: 1 / -1; padding: 3px 8px; }
+  .wx-avatar { width: 34px; height: 34px; }
+  .wx-icon { width: 34px; height: 34px; }
+  .wx-emblem { grid-column: 1; grid-row: 2; }
+  .wx-controls { grid-column: 2; grid-row: 2; align-self: center; width: min(100%, 420px); gap: 8px; }
+  .wx-buttons { grid-template-columns: 1fr 1fr; gap: 10px 8px; }
+  .wx-buttons .wx-btn3d:first-child { grid-column: 1 / -1; }
+  .wx-btn3d { height: 52px; font-size: 22px; }
+  .wx-btn3d.small { height: 40px; font-size: 17px; }
+  .wx-chip { height: 32px; font-size: 12px; }
+}
+@media (orientation: landscape) and (max-height: 400px) {
+  .wx-btn3d { height: 46px; font-size: 20px; }
+  .wx-chip { height: 30px; }
+  .wx-seg button { height: 28px; }
+}
+@media (orientation: portrait) {
+  .wx-btn3d { height: 60px; }
+}
+
+/* ───────── 대기실 ───────── */
+.wx-wait {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+.wx-wait-top {
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+  padding: 4px 8px; border-radius: 14px;
+  background: linear-gradient(180deg, rgba(30, 14, 12, .85), rgba(8, 5, 5, .85));
+  border: 1px solid rgba(243, 201, 105, .5);
+}
+.wx-code { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.wx-code small { color: var(--wx-gold); font-size: 12px; white-space: nowrap; }
+.wx-code strong { font: 400 26px/1.1 "Black Han Sans", sans-serif; letter-spacing: .16em; color: var(--wx-gold-hi); text-shadow: 0 0 12px rgba(243, 201, 105, .5); white-space: nowrap; }
+.wx-invite { flex: 0 0 auto; margin-left: auto; padding: 0 12px; height: 32px; }
+.wx-leave { flex: 0 0 auto; padding: 0 12px; height: 32px; }
+.wx-wait-top .wx-icons { margin-left: 0; }
+.wx-wait-top .wx-icon { width: 32px; height: 32px; }
+.wx-seats {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+.wx-vs { align-self: center; font: 400 30px "Black Han Sans", sans-serif; color: var(--wx-cinnabar); text-shadow: 0 0 14px rgba(217, 56, 41, .8), 0 2px 0 #000; }
+.wx-seat {
+  min-width: 0; min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px; border-radius: 18px; text-align: center;
+  background: linear-gradient(180deg, rgba(30, 14, 12, .78), rgba(8, 5, 5, .88));
+  border: 2px solid rgba(243, 201, 105, .4);
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, .5);
+}
+.wx-seat.mine { border-color: var(--wx-gold); }
+.wx-seat.ready { box-shadow: inset 0 0 30px rgba(0, 0, 0, .5), 0 0 18px rgba(243, 201, 105, .55); }
+.wx-seat-text { display: grid; gap: 2px; min-width: 0; max-width: 100%; }
+.wx-seat-text small { color: var(--wx-gold); font-size: 11px; }
+.wx-seat-text b { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wx-ready {
+  flex: none; padding: 3px 14px; border-radius: 999px; font-size: 12px; font-weight: 900;
+  background: rgba(255, 255, 255, .08); color: #d9c7aa; border: 1px solid rgba(255, 255, 255, .15);
+}
+.wx-ready.on { background: linear-gradient(180deg, #ff8a74, #b4232c); color: #fff; border-color: #ffd0c2; }
+.wx-wait-bottom {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, auto) minmax(140px, 180px);
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  padding: 6px 8px; border-radius: 14px;
+  background: linear-gradient(180deg, rgba(30, 14, 12, .85), rgba(8, 5, 5, .9));
+  border: 1px solid rgba(243, 201, 105, .45);
+}
+.wx-readybtn { height: 50px; font-size: 22px; }
+@media (orientation: portrait) {
+  .wx-wait-bottom { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .wx-wait-bottom .wx-chips { grid-column: 1 / -1; }
+  .wx-wait-top { flex-wrap: wrap; }
+  .wx-seats { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-content: center; }
+  .wx-seat { min-height: 220px; }
+}
+@media (orientation: landscape) and (max-height: 400px) {
+  .wx-wait { gap: 6px; padding-top: max(6px, env(safe-area-inset-top)); padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+  .wx-readybtn { height: 44px; font-size: 20px; }
+  .wx-code strong { font-size: 22px; }
+}
+
+/* ───────── 낮일밤장 직접 뽑기 ───────── */
+.wx-seon {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  justify-items: center;
+  align-items: center;
+  gap: 8px;
+  z-index: 5;
+}
+.wx-seon-rule {
+  margin: 0; padding: 6px 18px; border-radius: 999px;
+  font: 400 18px "Song Myung", serif; color: var(--wx-gold-hi);
+  background: rgba(8, 5, 5, .8); border: 1px solid rgba(243, 201, 105, .55);
+}
+.wx-seon-row { width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: center; min-height: 0; }
+.wx-seon-who { display: grid; justify-items: center; gap: 4px; min-width: 80px; }
+.wx-seon-who b { font-size: 14px; }
+.wx-seon-who em { font-style: normal; font: 400 22px "Black Han Sans", sans-serif; color: #ffd76a; }
+.wx-seon-who .portrait { width: 64px; }
+.wx-seon-who .wx-avatar { width: 60px; height: 60px; }
+.wx-seon-cards { display: flex; justify-content: center; align-items: center; gap: clamp(6px, 1.6vw, 14px); min-width: 0; }
+.wx-seon-card {
+  position: relative;
+  width: clamp(46px, 9vw, 84px);
+  aspect-ratio: 103.2 / 168.2;
+  border: 0; padding: 0; background: none;
+  perspective: 600px;
+  transition: transform .18s ease;
+}
+.wx-seon-card:not(:disabled):focus-visible { outline: 2px solid var(--wx-gold); outline-offset: 3px; }
+@media (hover: hover) { .wx-seon-card:not(:disabled):hover { transform: translateY(-8px); } }
+.wx-seon-card:not(:disabled) .back { animation: wx-glow 1.6s ease-in-out infinite; animation-delay: calc(var(--i, 0) * .12s); }
+.wx-seon-card:disabled { cursor: default; }
+.wx-seon-card .face {
+  position: absolute; inset: 0; border-radius: 7px; overflow: hidden;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  transition: transform .55s cubic-bezier(.2, .8, .2, 1);
+  box-shadow: 0 8px 14px rgba(0, 0, 0, .55), 0 0 0 1px rgba(0, 0, 0, .5);
+  background: #fffaf0;
+}
+.wx-seon-card .face img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.wx-seon-card .front { transform: rotateY(180deg); }
+.wx-seon-card.flipped .back { transform: rotateY(-180deg); }
+.wx-seon-card.flipped .front { transform: rotateY(0deg); }
+.wx-seon-card.mine .face { box-shadow: 0 0 0 3px var(--wx-gold), 0 0 20px rgba(243, 201, 105, .9); }
+.wx-seon-card.theirs .face { box-shadow: 0 0 0 3px var(--wx-cinnabar), 0 0 18px rgba(217, 56, 41, .8); }
+.wx-seon-card.mine, .wx-seon-card.theirs { transform: translateY(-12px); }
+.wx-seon-card i {
+  position: absolute; left: 50%; bottom: -20px; transform: translateX(-50%);
+  font-style: normal; font-size: 11px; font-weight: 900; padding: 1px 8px; border-radius: 999px;
+  background: #120806; border: 1px solid var(--wx-gold); color: var(--wx-gold-hi); white-space: nowrap;
+}
+.wx-seon-card.theirs i { border-color: var(--wx-cinnabar); }
+.wx-seon-result {
+  margin: 0; padding: 8px 22px; border-radius: 14px;
+  font: 400 20px "Black Han Sans", sans-serif; color: #fff6df;
+  background: rgba(8, 5, 5, .82); border: 1px solid rgba(243, 201, 105, .45);
+}
+.wx-seon-result.done { color: #2a1206; background: linear-gradient(180deg, #fff1c0, #f3c969 55%, #c48a2a); animation: pop .3s ease both; }
+@keyframes wx-glow { 50% { box-shadow: 0 8px 14px rgba(0, 0, 0, .55), 0 0 0 2px rgba(243, 201, 105, .9), 0 0 18px rgba(243, 201, 105, .7); } }
+@media (orientation: portrait) {
+  .wx-seon-row { grid-template-columns: 1fr 1fr; }
+  .wx-seon-cards { grid-column: 1 / -1; grid-row: 1; flex-wrap: wrap; padding: 0 4px 20px; }
+  .wx-seon-card { width: clamp(52px, 26vw, 96px); }
+}
+
+/* ───────── 인게임: 상시 먹은 패 ───────── */
+.wx-caps {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 3px 4px;
+  border-radius: 10px;
+  background: rgba(8, 6, 6, .55);
+  border: 1px solid rgba(243, 201, 105, .35);
+  flex: none;
+}
+.wx-cap-row {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  gap: 3px;
+  align-items: center;
+  height: 27px;
+  min-width: 0;
+}
+.wx-cap-row b { font-size: 11px; line-height: 1; color: var(--wx-gold); font-weight: 900; text-align: center; }
+.wx-cap-row > span { min-width: 14px; text-align: right; font-size: 11px; font-weight: 900; color: #fff6df; white-space: nowrap; }
+.wx-cap-row:not(.has) { opacity: .5; }
+.wx-cap-stack {
+  container-type: inline-size;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+.wx-cap-stack .hwatu,
+.stage .wx-cap-stack .hwatu.mini,
+.wx-cap-stack .hwatu.mini {
+  flex: none;
+  width: 16px;
+  height: 26px;
+  aspect-ratio: auto;
+  margin-left: clamp(-13px, calc((100cqi - 16px) / var(--d, 1) - 16px), 1px);
+  border-radius: 2px;
+  transform: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .7), 0 0 0 1px rgba(0, 0, 0, .4);
+}
+.wx-cap-stack .hwatu:first-child { margin-left: 0; }
+.wx-cap-stack .hwatu img { border-radius: 2px; }
+.cap-gwang.has b { color: #ffe08a; text-shadow: 0 0 6px rgba(255, 220, 120, .8); }
+
+/* ───────── 인게임: 큰 금박 점수 ───────── */
+.wx-score,
+.stage .who strong.wx-score,
+.who strong.wx-score {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 3px;
+  font: 400 26px/1 "Black Han Sans", "Noto Sans KR", sans-serif;
+  color: #ffd76a;
+  text-shadow: 0 2px 0 #6b3a08, 0 0 10px rgba(255, 200, 80, .65);
+  letter-spacing: .01em;
+  white-space: nowrap;
+}
+.wx-score small { font-size: 13px; color: #f3c969; }
+.wx-go {
+  align-self: center;
+  font: 900 11px/1 "Noto Sans KR", sans-serif;
+  font-style: normal;
+  padding: 3px 6px;
+  margin-left: 3px;
+  border-radius: 999px;
+  color: #fff;
+  text-shadow: none;
+  background: linear-gradient(180deg, #ff6a4a, #b4232c);
+  box-shadow: 0 0 8px rgba(255, 90, 60, .8);
+}
+.stage .warn, .warn {
+  display: block; text-align: center; font-style: normal; font-size: 11px; font-weight: 900;
+  padding: 2px 6px; border-radius: 999px; color: #fff; background: #b4232c;
+  box-shadow: 0 0 10px rgba(255, 80, 60, .7); animation: wx-blink 1s ease-in-out infinite;
+}
+.stage .warn.gold, .warn.gold { color: #2a1206; background: #f3c969; box-shadow: 0 0 10px rgba(243, 201, 105, .8); }
+@keyframes wx-blink { 50% { filter: brightness(1.35); } }
+
+.stage .topbar .wx-icons { margin-left: 0; }
+.stage .topbar .wx-icon { width: 30px; height: 28px; border-radius: 9px; }
+.stage .topbar .wx-icon small { display: none; }
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .stage .who { gap: 0; }
+  .stage .who .portrait { width: 28px; }
+  .stage .who b { font-size: 13px; }
+  .stage .who span { font-size: 11px; }
+  .stage .player.top, .stage .side { gap: 3px; padding: 4px; }
+  .stage .emote-toggle { height: 22px; }
+}
+@media (orientation: landscape) and (max-height: 400px) {
+  .wx-cap-row { height: 24px; }
+  .wx-cap-stack .hwatu, .stage .wx-cap-stack .hwatu.mini { width: 14px; height: 23px; margin-left: clamp(-11px, calc((100cqi - 14px) / var(--d, 1) - 14px), 1px); }
+  .stage .who .portrait { width: 24px; }
+  .wx-score, .stage .who strong.wx-score { font-size: 23px; }
+}

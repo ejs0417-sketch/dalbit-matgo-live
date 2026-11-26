@@ -4,7 +4,8 @@ import { goIntensity } from '../engine/score'
 import type { Action, GameEvent, Seat } from '../engine/types'
 import { CHARACTER_LINES, EMOTES, type Mood } from '../shared/cast'
 import { audio } from './audio'
-import { bannerFor, HwatuCard, Impact, monthLabel, soundFor, SoundBar, won } from './bits'
+import { bannerFor, HwatuCard, Impact, monthLabel, soundFor, won } from './bits'
+import { SoundIcons } from './lobby'
 import { Portrait } from './characters'
 import type { EmoteMsg, RoomInfo, Showdown, TablePacket } from './model'
 import { Button } from './ui'
@@ -183,25 +184,25 @@ function Bill({
   )
 }
 
-function Pile({ title, ids, extra }: { title: string; ids: string[]; extra?: string }) {
-  return (
-    <div className="pile">
-      <header><b>{title}</b><span>{extra ?? `${ids.length}`}</span></header>
-      <div>
-        {ids.map((id) => <HwatuCard key={id} id={id} mini />)}
-      </div>
-    </div>
-  )
-}
-
-function Captures({ ids, piCount, gukjin }: { ids: string[]; piCount: number; gukjin: boolean }) {
+function CaptureStrip({ ids, piCount, gukjin, side }: { ids: string[]; piCount: number; gukjin: boolean; side: 'you' | 'opp' }) {
   const g = groups(ids)
+  const rows: { key: string; title: string; ids: string[]; count: string }[] = [
+    { key: 'gwang', title: '광', ids: g.gwang, count: `${g.gwang.length}` },
+    { key: 'yeol', title: '열', ids: g.yeol, count: gukjin ? `${g.yeol.length}·국진피` : `${g.yeol.length}` },
+    { key: 'tti', title: '띠', ids: g.tti, count: `${g.tti.length}` },
+    { key: 'pi', title: '피', ids: g.pi, count: `${piCount}` },
+  ]
   return (
-    <div className="captures">
-      <Pile title="광" ids={g.gwang} />
-      <Pile title="열" ids={g.yeol} extra={gukjin ? '국진 쌍피' : undefined} />
-      <Pile title="띠" ids={g.tti} />
-      <Pile title="피" ids={g.pi} extra={`${piCount}`} />
+    <div className={`wx-caps wx-caps-${side}`} data-captures={side} aria-label={side === 'you' ? '내가 먹은 패' : '상대가 먹은 패'}>
+      {rows.map((row) => (
+        <div key={row.key} className={`wx-cap-row cap-${row.key}${row.ids.length ? ' has' : ''}`}>
+          <b>{row.title}</b>
+          <div className="wx-cap-stack" style={{ ['--d' as string]: String(Math.max(1, row.ids.length - 1)) }}>
+            {row.ids.map((id) => <HwatuCard key={id} id={id} mini />)}
+          </div>
+          <span>{row.count}</span>
+        </div>
+      ))}
     </div>
   )
 }
@@ -242,7 +243,6 @@ export function Table({
   const [hit, setHit] = useState<'kung' | 'jjak' | null>(null)
   const [tick, setTick] = useState(Date.now())
   const [focusMonth, setFocusMonth] = useState<number | null>(null)
-  const [openPile, setOpenPile] = useState<'you' | 'opp' | null>(null)
   const [emoteOpen, setEmoteOpen] = useState(false)
   const warned = useRef(-1)
 
@@ -378,8 +378,19 @@ export function Table({
           <button type="button" className={mine?.auto ? 'auto on' : 'auto'} onClick={() => onAuto(!mine?.auto)}>
             {mine?.auto ? '자동치기 켜짐' : '자동치기'}
           </button>
+          <button
+            type="button"
+            className={document.body.classList.contains('calm') ? 'auto on' : 'auto'}
+            onClick={() => {
+              const next = !document.body.classList.contains('calm')
+              document.body.classList.toggle('calm', next)
+              localStorage.setItem('dalbit-calm', next ? '1' : '0')
+            }}
+          >
+            연출↓
+          </button>
         </div>
-        <SoundBar />
+        <SoundIcons />
       </header>
       <div className="shell">
         <div className={`felt${aura}`}>
@@ -390,23 +401,18 @@ export function Table({
                 <div>
                   <b>{opp?.nickname || '상대'}</b>
                   <span>{opp?.connected ? `${won(opp.money)}원` : '접속이 끊겼습니다'}</span>
-                  <strong>{view.oppScore.total}점 {view.oppGo > 0 ? `· ${view.oppGo}고` : ''}</strong>
+                  <strong className="wx-score" data-score="opp">{view.oppScore.total}<small>점</small>{view.oppGo > 0 && <em className="wx-go">{view.oppGo}고</em>}</strong>
                 </div>
                 {bubble?.who !== view.you && bubble && <p className="bubble">{bubble.text}</p>}
               </div>
-              <button type="button" className="badges" onClick={() => setOpenPile(openPile === 'opp' ? null : 'opp')}>
-                <span>광 {groups(view.opponentCapture).gwang.length}</span>
-                <span>열 {groups(view.opponentCapture).yeol.length}</span>
-                <span>띠 {groups(view.opponentCapture).tti.length}</span>
-                <span>피 {view.oppScore.piCount}</span>
-              </button>
+              {(view.oppScore.piCount > 0 && view.oppScore.piCount <= 7 && view.youScore.total >= 7) && <em className="warn">상대 피박 위기</em>}
+              <CaptureStrip ids={view.opponentCapture} piCount={view.oppScore.piCount} gukjin={view.oppGukjin} side="opp" />
               <div className="hand opp">
                 {view.opponentRevealed.map((id) => <HwatuCard key={id} id={id} mini />)}
                 {Array.from({ length: Math.max(0, view.opponentHandCount - view.opponentRevealed.length) }, (_, i) => (
                   <HwatuCard key={`b${i}`} back mini />
                 ))}
               </div>
-              {openPile === 'opp' && <Captures ids={view.opponentCapture} piCount={view.oppScore.piCount} gukjin={view.oppGukjin} />}
             </div>
 
             <div className="middle">
@@ -493,30 +499,13 @@ export function Table({
                 <div>
                   <b>{you?.nickname}</b>
                   <span>{won(you?.money ?? 0)}원 {view.yourPiDebt > 0 ? `· 피 빚 ${view.yourPiDebt}` : ''}</span>
-                  <strong>{view.youScore.total}점 {view.yourGo > 0 ? `· ${view.yourGo}고` : ''}</strong>
+                  <strong className="wx-score" data-score="you">{view.youScore.total}<small>점</small>{view.yourGo > 0 && <em className="wx-go">{view.yourGo}고</em>}</strong>
                 </div>
                 {bubble?.who === view.you && <p className="bubble">{bubble.text}</p>}
               </div>
               {(view.youScore.piCount > 0 && view.youScore.piCount <= 7 && view.oppScore.total >= 7) && <em className="warn">피박 주의</em>}
               {(view.oppScore.gwangCount >= 3 && view.youScore.gwangCount === 0) && <em className="warn gold">광박 주의</em>}
-              <button type="button" className="badges" onClick={() => setOpenPile(openPile === 'you' ? null : 'you')}>
-                <span>광 {groups(view.yourCapture).gwang.length}</span>
-                <span>열 {groups(view.yourCapture).yeol.length}</span>
-                <span>띠 {groups(view.yourCapture).tti.length}</span>
-                <span>피 {view.youScore.piCount}</span>
-              </button>
-              {openPile === 'you' && <Captures ids={view.yourCapture} piCount={view.youScore.piCount} gukjin={view.yourGukjin} />}
-              <button
-                type="button"
-                className={document.body.classList.contains('calm') ? 'auto on' : 'auto'}
-                onClick={() => {
-                  const next = !document.body.classList.contains('calm')
-                  document.body.classList.toggle('calm', next)
-                  localStorage.setItem('dalbit-calm', next ? '1' : '0')
-                }}
-              >
-                연출 약하게
-              </button>
+              <CaptureStrip ids={view.yourCapture} piCount={view.youScore.piCount} gukjin={view.yourGukjin} side="you" />
               <div className="dock">
                 <button type="button" className="charge" onClick={onRecharge}>충전</button>
               </div>

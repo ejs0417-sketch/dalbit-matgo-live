@@ -500,15 +500,6 @@ function beginSeonDraw(room: Room, round = 1, prevSteps: { a: string; b: string 
       you: seat,
     })
   }
-  const aiSeat = ([0, 1] as const).find((s) => room.seats[s].ai)
-  if (aiSeat !== undefined) {
-    room.seonAiTimer = setTimeout(() => {
-      if (room.nightToken !== token || !room.seonDraw || room.seonDraw.resolved) return
-      const taken = new Set(room.seonDraw.picks.filter((p): p is number => p !== null))
-      const avail = room.seonDraw.pool.map((_, i) => i).filter((i) => !taken.has(i))
-      if (avail.length) handleSeonPick(room, aiSeat, avail[Math.floor(Math.random() * avail.length)]!)
-    }, 650)
-  }
   room.nightTimer = setTimeout(() => {
     if (room.nightToken !== token || !room.seonDraw || room.seonDraw.resolved) return
     for (const s of [0, 1] as const) {
@@ -590,6 +581,17 @@ function handleSeonPick(room: Room, seat: Seat, index: number) {
   pushRoom(room)
   if (draw.picks[0] !== null && draw.picks[1] !== null) {
     resolveSeonDraw(room, room.nightToken)
+    return
+  }
+  const other = (1 - seat) as Seat
+  if (room.seats[other].ai && draw.picks[other] === null) {
+    const token = room.nightToken
+    if (room.seonAiTimer) clearTimeout(room.seonAiTimer)
+    room.seonAiTimer = setTimeout(() => {
+      if (room.nightToken !== token || room.seonDraw !== draw || draw.resolved) return
+      const avail = draw.pool.map((_, i) => i).filter((i) => i !== draw.picks[seat])
+      if (avail.length) handleSeonPick(room, other, avail[Math.floor(Math.random() * avail.length)]!)
+    }, 500)
   }
 }
 

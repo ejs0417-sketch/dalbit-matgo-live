@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import type { Action } from '../engine/types'
 import { avatarById, AVATARS } from '../shared/cast'
 import { audio } from './audio'
-import { Lobby, NightCut, RoomWait } from './lobby'
+import { Lobby, NightCut, RoomWait, SeonPick } from './lobby'
 import { lockLandscape } from './orient'
 import { won } from './bits'
-import type { EmoteMsg, NightMsg, RoomInfo, RoomSummary, TablePacket } from './model'
+import type { EmoteMsg, NightMsg, RoomInfo, RoomSummary, SeonReveal, TablePacket } from './model'
 import { Table } from './table'
 
 function PurseToast({ from, to, onDone }: { from: number; to: number; onDone: () => void }) {
@@ -52,6 +52,7 @@ export function App() {
   const [room, setRoom] = useState<RoomInfo | null>(null)
   const [packet, setPacket] = useState<TablePacket | null>(null)
   const [night, setNight] = useState<NightMsg | null>(null)
+  const [reveal, setReveal] = useState<SeonReveal | null>(null)
   const [emote, setEmote] = useState<EmoteMsg | null>(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -135,7 +136,15 @@ export function App() {
           setRoom(null)
           setPacket(null)
           setNight(null)
+          setReveal(null)
+        } else if (msg.type === 'seon_draw') {
+          setReveal(null)
+          setRoom((prev) => prev ? { ...prev, status: 'night', seonDraw: { round: Number(msg.round), isDay: Boolean(msg.isDay), count: Number(msg.count), picks: msg.picks as [number | null, number | null], deadlineAt: Number(msg.deadlineAt), resolved: null } } : prev)
+        } else if (msg.type === 'seon_reveal') {
+          setReveal({ round: Number(msg.round), isDay: Boolean(msg.isDay), a: String(msg.a), b: String(msg.b), picks: msg.picks as [number | null, number | null], seon: msg.seon === null ? null : (msg.seon as 0 | 1), tie: Boolean(msg.tie) })
+          audio.play('flip')
         } else if (msg.type === 'night') {
+          if (roomRef.current?.seonDraw) return
           setNight({ steps: msg.steps as NightMsg['steps'], seon: msg.seon as 0 | 1, you: msg.you as 0 | 1 })
         } else if (msg.type === 'emote') {
           emoteSeq.current += 1
@@ -150,6 +159,7 @@ export function App() {
           }
           if (msg.view) {
             setNight(null)
+            setReveal(null)
             seq.current += 1
             setPacket({
               id: seq.current,
@@ -269,6 +279,14 @@ export function App() {
           onAuto={(on) => send({ type: 'auto', on })}
           onArmed={() => send({ type: 'ready_turn' })}
         />
+      </>
+    )
+  }
+  if (room && room.status === 'night' && room.seonDraw) {
+    return (
+      <>
+        {toast}
+        <SeonPick room={room} reveal={reveal} onPick={(index) => send({ type: 'pick_seon', index })} />
       </>
     )
   }
