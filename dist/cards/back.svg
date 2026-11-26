@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 103.2 168.2" width="103.2" height="168.2">
+  <defs>
+    <radialGradient id="felt" cx="50%" cy="42%" r="70%">
+      <stop offset="0%" stop-color="#c4322e"/>
+      <stop offset="55%" stop-color="#9d1c24"/>
+      <stop offset="100%" stop-color="#6d1018"/>
+    </radialGradient>
+    <pattern id="asanoha" width="14" height="16.2" patternUnits="userSpaceOnUse">
+      <path d="M7 0 L14 8.1 L7 16.2 L0 8.1 Z" fill="none" stroke="#f3d7a1" stroke-width="0.45" opacity="0.45"/>
+      <path d="M7 3.2 L10.2 8.1 L7 13 L3.8 8.1 Z" fill="none" stroke="#fff4d4" stroke-width="0.3" opacity="0.35"/>
+    </pattern>
+  </defs>
+  <rect x="1.2" y="1.2" width="100.8" height="165.8" rx="6" fill="url(#felt)" stroke="#1a0a0c" stroke-width="2.4"/>
+  <rect x="5" y="5" width="93.2" height="158.2" rx="4" fill="none" stroke="#e6c36a" stroke-width="1.3"/>
+  <rect x="8" y="8" width="87.2" height="152.2" rx="3" fill="url(#asanoha)"/>
+  <circle cx="51.6" cy="78" r="24" fill="#7d1218" stroke="#f0d48a" stroke-width="1.4"/>
+  <circle cx="51.6" cy="78" r="16" fill="none" stroke="#f7e7b2" stroke-width="0.7"/>
+  <g fill="#f4e2ae" stroke="#8c1d22" stroke-width="0.4">
+    <path d="M51.6 64c2 5 6 7.2 6 7.2s-4.2 1-6 5.6c-1.8-4.6-6-5.6-6-5.6S49.6 69 51.6 64z"/>
+    <path d="M64.5 73c-4.6 2.6-5.2 7-5.2 7s-1.6-4-6.2-5.4c4.6-1.6 5.6-6 5.6-6S60.2 71 64.5 73z"/>
+    <path d="M61.8 87.2c-5 .2-6.6 4.6-6.6 4.6s.6-4.2-3.6-6.6c4.2 2.2 8.2.6 8.2.6S65.2 87 61.8 87.2z"/>
+    <path d="M41.4 87.2c5 .2 6.6 4.6 6.6 4.6s-.6-4.2 3.6-6.6c-4.2 2.2-8.2.6-8.2.6S38 87 41.4 87.2z"/>
+    <path d="M38.7 73c4.6 2.6 5.2 7 5.2 7s1.6-4 6.2-5.4c-4.6-1.6-5.6-6-5.6-6S43 71 38.7 73z"/>
+  </g>
+  <circle cx="51.6" cy="78.4" r="3.1" fill="#f8e7b0" stroke="#a11f28" stroke-width="0.4"/>
+  <path d="M18 20h8M18 24h5M77 20h8M80 24h5M18 146h8M18 142h5M77 146h8M80 142h5" stroke="#f0d48a" stroke-width="0.8" stroke-linecap="round" opacity="0.8"/>
+</svg>
