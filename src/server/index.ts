@@ -6,9 +6,9 @@ import express from 'express'
 import { WebSocket, WebSocketServer } from 'ws'
 import { chooseAiAction, timeoutAction } from '../engine/ai'
 import { limitForPhase, mayAct, RECONNECT_LIMIT_MS, registerTimeout } from '../engine/clock'
-import { ALL_IDS, BETS, CARDS } from '../engine/cards'
+import { BETS } from '../engine/cards'
 import { applyAction, closeByForfeit, createGame, decider, nextRound } from '../engine/game'
-import { makeRng } from '../engine/rng'
+import { dealSeonPool, isDaytimeKst, judgeSeon, SEON_PICK_TIMEOUT_MS } from '../engine/seon'
 import { rechargeGuard } from '../engine/score'
 import type { Action, GameEvent, GameState, Seat } from '../engine/types'
 import { viewFor } from '../engine/view'
@@ -68,6 +68,16 @@ interface Showdown {
   details: { label: string; points: number }[]
 }
 
+interface SeonDrawState {
+  round: number
+  isDay: boolean
+  pool: string[]
+  picks: [number | null, number | null]
+  deadlineAt: number
+  steps: { a: string; b: string }[]
+  resolved?: { seon: Seat; a: string; b: string }
+}
+
 interface Room {
   code: string
   mode: 'pvp' | 'ai'
@@ -83,6 +93,8 @@ interface Room {
   showdown?: Showdown
   aiTimer?: ReturnType<typeof setTimeout>
   nightTimer?: ReturnType<typeof setTimeout>
+  seonAiTimer?: ReturnType<typeof setTimeout>
+  seonDraw?: SeonDrawState
   forfeitTimer?: ReturnType<typeof setTimeout>
   turnTimer?: ReturnType<typeof setTimeout>
   nightToken: number
@@ -189,6 +201,16 @@ function publicRoom(room: Room, seat?: Seat) {
     disconnectedSeat: room.forfeitAt
       ? (([0, 1] as const).find((seat) => !room.seats[seat].connected && !room.seats[seat].ai) ?? null)
       : null,
+    seonDraw: room.seonDraw
+      ? {
+          round: room.seonDraw.round,
+          isDay: room.seonDraw.isDay,
+          count: room.seonDraw.pool.length,
+          picks: room.seonDraw.picks,
+          deadlineAt: room.seonDraw.deadlineAt,
+          resolved: room.seonDraw.resolved ?? null,
+        }
+      : null,
     notice: room.notice ?? null,
     serverNow: Date.now(),
   }
@@ -244,8 +266,10 @@ function clearTurnTimers(room: Room) {
 function clearTimers(room: Room) {
   clearTurnTimers(room)
   if (room.nightTimer) clearTimeout(room.nightTimer)
+  if (room.seonAiTimer) clearTimeout(room.seonAiTimer)
   if (room.forfeitTimer) clearTimeout(room.forfeitTimer)
   room.nightTimer = undefined
+  room.seonAiTimer = undefined
   room.forfeitTimer = undefined
   room.forfeitAt = undefined
   room.deadlineAt = undefined
@@ -452,39 +476,128 @@ function startRound(room: Room) {
   armTurn(room)
 }
 
-function nightSteps(seed: number) {
-  const rng = makeRng(seed)
-  const pool = ALL_IDS.filter((id) => (CARDS[id]?.month ?? 0) > 0)
-  const steps: { a: string; b: string }[] = []
-  for (let i = 0; i < 6; i++) {
-    const a = pool[Math.floor(rng.next() * pool.length)]!
-    const b = pool[Math.floor(rng.next() * pool.length)]!
-    steps.push({ a, b })
-    const ma = CARDS[a]!.month
-    const mb = CARDS[b]!.month
-    if (ma !== mb) return { steps, seon: (ma > mb ? 0 : 1) as Seat }
+function beginSeonDraw(room: Room, round = 1, prevSteps: { a: string; b: string }[] = []) {
+  if (room.nightTimer) clearTimeout(room.nightTimer)
+  if (room.seonAiTimer) clearTimeout(room.seonAiTimer)
+  const isDay = isDaytimeKst()
+  const pool = dealSeonPool(Math.floor(Math.random() * 1e9) + round * 97 + 3)
+  const deadlineAt = Date.now() + SEON_PICK_TIMEOUT_MS
+  room.status = 'night'
+  room.nightToken += 1
+  const token = room.nightToken
+  room.seonDraw = { round, isDay, pool, picks: [null, null], deadlineAt, steps: [...prevSteps] }
+  pushRoom(room)
+  for (const seat of [0, 1] as const) {
+    const slot = room.seats[seat]
+    if (!slot.token) continue
+    send(sessions.get(slot.token)?.ws, {
+      type: 'seon_draw',
+      round,
+      isDay,
+      count: pool.length,
+      picks: room.seonDraw.picks,
+      deadlineAt,
+      you: seat,
+    })
   }
-  return { steps, seon: 0 as Seat }
+  const aiSeat = ([0, 1] as const).find((s) => room.seats[s].ai)
+  if (aiSeat !== undefined) {
+    room.seonAiTimer = setTimeout(() => {
+      if (room.nightToken !== token || !room.seonDraw || room.seonDraw.resolved) return
+      const taken = new Set(room.seonDraw.picks.filter((p): p is number => p !== null))
+      const avail = room.seonDraw.pool.map((_, i) => i).filter((i) => !taken.has(i))
+      if (avail.length) handleSeonPick(room, aiSeat, avail[Math.floor(Math.random() * avail.length)]!)
+    }, 650)
+  }
+  room.nightTimer = setTimeout(() => {
+    if (room.nightToken !== token || !room.seonDraw || room.seonDraw.resolved) return
+    for (const s of [0, 1] as const) {
+      if (room.seonDraw.picks[s] === null) {
+        const taken = new Set(room.seonDraw.picks.filter((p): p is number => p !== null))
+        const avail = room.seonDraw.pool.map((_, i) => i).filter((i) => !taken.has(i))
+        if (avail.length) room.seonDraw.picks[s] = avail[Math.floor(Math.random() * avail.length)]!
+      }
+    }
+    resolveSeonDraw(room, token)
+  }, SEON_PICK_TIMEOUT_MS)
+}
+
+function resolveSeonDraw(room: Room, token: number) {
+  const draw = room.seonDraw
+  if (!draw || draw.resolved || draw.picks[0] === null || draw.picks[1] === null) return
+  if (room.nightTimer) clearTimeout(room.nightTimer)
+  if (room.seonAiTimer) clearTimeout(room.seonAiTimer)
+  const a = draw.pool[draw.picks[0]]!
+  const b = draw.pool[draw.picks[1]]!
+  draw.steps.push({ a, b })
+  const outcome = judgeSeon(a, b, draw.isDay)
+  if (outcome === 'tie' && draw.round < 6) {
+    for (const seat of [0, 1] as const) {
+      const slot = room.seats[seat]
+      if (!slot.token) continue
+      send(sessions.get(slot.token)?.ws, {
+        type: 'seon_reveal',
+        round: draw.round,
+        isDay: draw.isDay,
+        a,
+        b,
+        picks: draw.picks,
+        seon: null,
+        tie: true,
+        you: seat,
+      })
+    }
+    room.nightTimer = setTimeout(() => {
+      if (room.nightToken !== token) return
+      beginSeonDraw(room, draw.round + 1, draw.steps)
+    }, 1300)
+    return
+  }
+  const winner: Seat = outcome === 'tie' ? 0 : outcome
+  draw.resolved = { seon: winner, a, b }
+  room.seon = winner
+  for (const seat of [0, 1] as const) {
+    const slot = room.seats[seat]
+    if (!slot.token) continue
+    const ws = sessions.get(slot.token)?.ws
+    send(ws, {
+      type: 'seon_reveal',
+      round: draw.round,
+      isDay: draw.isDay,
+      a,
+      b,
+      picks: draw.picks,
+      seon: winner,
+      tie: false,
+      you: seat,
+    })
+    send(ws, { type: 'night', steps: draw.steps, seon: winner, isDay: draw.isDay, you: seat })
+  }
+  room.nightTimer = setTimeout(() => {
+    if (room.nightToken !== token) return
+    room.seonDraw = undefined
+    startRound(room)
+  }, 1500)
+}
+
+function handleSeonPick(room: Room, seat: Seat, index: number) {
+  const draw = room.seonDraw
+  if (room.status !== 'night' || !draw || draw.resolved) return
+  if (!Number.isInteger(index) || index < 0 || index >= draw.pool.length) return
+  if (draw.picks[seat] !== null) return
+  if (draw.picks[(1 - seat) as Seat] === index) return
+  draw.picks[seat] = index
+  pushRoom(room)
+  if (draw.picks[0] !== null && draw.picks[1] !== null) {
+    resolveSeonDraw(room, room.nightToken)
+  }
 }
 
 function openRound(room: Room) {
   clearTimers(room)
+  room.seonDraw = undefined
   if (room.games === 0 && room.seonRule === 'night') {
-    const night = nightSteps(Math.floor(Math.random() * 1e9) + 3)
-    room.seon = night.seon
-    room.status = 'night'
-    room.nightToken += 1
-    const token = room.nightToken
-    pushRoom(room)
-    for (const seat of [0, 1] as const) {
-      const slot = room.seats[seat]
-      if (!slot.token) continue
-      send(sessions.get(slot.token)?.ws, { type: 'night', steps: night.steps, seon: night.seon, you: seat })
-    }
-    room.nightTimer = setTimeout(() => {
-      if (room.nightToken !== token) return
-      startRound(room)
-    }, night.steps.length * 1300 + 500)
+    beginSeonDraw(room, 1, [])
     return
   }
   if (room.games === 0 && room.seonRule === 'random') room.seon = Math.random() < 0.5 ? 0 : 1
@@ -732,6 +845,11 @@ function onMessage(ws: WebSocket, raw: string) {
     broadcastRooms()
     return
   }
+  if (msg.type === 'pick_seon' && session.seat !== undefined) {
+    const room = roomOf(session)
+    if (room) handleSeonPick(room, session.seat, Number(msg.index))
+    return
+  }
   if (msg.type === 'ready') {
     const room = roomOf(session)
     if (!room || session.seat === undefined || room.status !== 'lobby') return
@@ -801,8 +919,9 @@ function onMessage(ws: WebSocket, raw: string) {
     const room = roomOf(session)
     const who = room?.game ? decider(room.game) : null
     if (!room?.game || !room.awaitingReady || who === null) return
-    if (room.turnTimer) clearTimeout(room.turnTimer)
     const aiLike = room.seats[who].ai || room.auto[who]
+    if (!aiLike && session.seat !== who) return
+    if (room.turnTimer) clearTimeout(room.turnTimer)
     const elapsed = Date.now() - (room.armedAt ?? 0)
     const wait = aiLike ? Math.max(0, 1800 - elapsed) : 0
     room.turnTimer = setTimeout(() => releaseTurn(room, who), wait)

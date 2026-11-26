@@ -1,3 +1,4 @@
+import { dealSeonPool, isDaytimeKst, judgeSeon } from './seon'
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -708,5 +709,20 @@ describe('AI 대국', () => {
     const { state } = createGame({ seed: 7 })
     const seat = state.turn
     expect(applyAi(state, seat).ok).toBe(true)
+  })
+})
+
+describe('낮일밤장 선 뽑기 (KST)', () => {
+  it('KST 낮(06~18시)은 작은 월, 밤(18~06시)은 큰 월이 선이 되고 동월은 tie다', () => {
+    // 2026-11-26 10:00 KST (01:00 UTC) -> 낮
+    expect(isDaytimeKst(Date.UTC(2026, 10, 26, 1, 0, 0))).toBe(true)
+    // 2026-11-26 21:00 KST (12:00 UTC) -> 밤
+    expect(isDaytimeKst(Date.UTC(2026, 10, 26, 12, 0, 0))).toBe(false)
+    expect(judgeSeon('m01-gwang', 'm12-gwang', true)).toBe(0)
+    expect(judgeSeon('m01-gwang', 'm12-gwang', false)).toBe(1)
+    expect(judgeSeon('m03-gwang', 'm03-pi1', true)).toBe('tie')
+    const pool = dealSeonPool(42)
+    expect(pool).toHaveLength(6)
+    expect(new Set(pool).size).toBe(6)
   })
 })
